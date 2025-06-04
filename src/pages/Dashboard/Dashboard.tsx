@@ -23,14 +23,13 @@ interface Product {
 
 // Komponen untuk halaman Peminjaman
 const PeminjamanPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const itemsPerPage = 12;  // Optimasi fetch data dengan cache
+  const [totalProducts, setTotalProducts] = useState(0);  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);
+  const itemsPerPage = 12;  // Optimasi fetch data dengan cache dan background loading
   const fetchPageProducts = async () => {
     try {
       const role = sessionStorage.getItem('userRole') || 'user';
@@ -45,6 +44,11 @@ const PeminjamanPage = () => {
         if (Date.now() - timestamp < 5 * 60 * 1000) {
           setProducts(data.product_list);
           setTotalProducts(data.total_products);
+          
+          // Start background loading jika belum complete dan ini page 1
+          if (page === 1 && !backgroundLoadingComplete) {
+            backgroundLoadAllProducts(1); // Start from index 1 since we already have index 0
+          }
           return;
         }
       }
@@ -61,8 +65,18 @@ const PeminjamanPage = () => {
       sessionStorage.setItem(cacheKey, JSON.stringify({
         data,
         timestamp: Date.now()
-      }));      setProducts(data.product_list || []);
+      }));
+      
+      setProducts(data.product_list || []);
       setTotalProducts(data.total_products || 0);
+        // Start background loading untuk semua data jika ini page 1
+      if (page === 1 && !backgroundLoadingComplete) {
+        // Start background loading from next index
+        setTimeout(() => {
+          console.log('Starting background loading from index 1...');
+          backgroundLoadAllProducts(1);
+        }, 500); // Delay 500ms agar tidak mengganggu loading page pertama
+      }
 
     } catch (err) {
       console.error('Error:', err);
@@ -70,26 +84,74 @@ const PeminjamanPage = () => {
     } finally {
       setLoading(false);
     }
-  };  // Ubah cara fetch all products
-  const fetchAllProducts = async () => {
+  };// Background loading semua produk secara bertahap
+  const backgroundLoadAllProducts = async (startIndex: number = 0) => {
     try {
-      if (!sessionStorage.getItem('token')) return;
-      
       const role = sessionStorage.getItem('userRole') || 'user';
-      const response = await apiService.get(`/product/list?role=${role}`);
+      let currentIndex = startIndex;
+      let allLoadedProducts: Product[] = [...allProducts];
       
-      const data = await response.json();
-      setAllProducts(data.product_list || []);
+      // Cek cache untuk data lengkap
+      const allProductsCacheKey = `all_products_${role}`;
+      const cachedAllProducts = sessionStorage.getItem(allProductsCacheKey);
+      
+      if (cachedAllProducts) {
+        const { data, timestamp } = JSON.parse(cachedAllProducts);
+        // Cache valid for 10 minutes untuk data lengkap
+        if (Date.now() - timestamp < 10 * 60 * 1000) {
+          setAllProducts(data);
+          setBackgroundLoadingComplete(true);
+          return;
+        }
+      }
+
+      while (true) {
+        const response = await apiService.get(`/product/list?index=${currentIndex}&role=${role}`);
+        
+        if (!response.ok) break;
+        
+        const data = await response.json();
+        
+        if (!data.product_list || data.product_list.length === 0) {
+          break; // No more data
+        }
+          // Append new products to existing ones
+        allLoadedProducts = [...allLoadedProducts, ...data.product_list];
+        setAllProducts(allLoadedProducts);
+        
+        // Check if we've reached the last page
+        if (currentIndex >= data.last_index || data.product_list.length < itemsPerPage) {
+          break;
+        }
+        
+        currentIndex++;
+        
+        // Add small delay to prevent overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Save complete data to cache
+      sessionStorage.setItem(allProductsCacheKey, JSON.stringify({
+        data: allLoadedProducts,
+        timestamp: Date.now()
+      }));
+      
+      setBackgroundLoadingComplete(true);
+      console.log(`Background loading complete: ${allLoadedProducts.length} products loaded`);
+      
     } catch (err) {
-      console.error('Error fetching all products:', err);
+      console.error('Error in background loading:', err);
     }
   };
-
-  // Ubah useEffect untuk menghindari fetch berlebihan
+  // Optimasi useEffect untuk loading data
   useEffect(() => {
     if (searchValue) {
-      // Fetch all products hanya jika dalam mode pencarian
-      fetchAllProducts();
+      // Jika sedang search dan background loading belum complete, tunggu atau gunakan data yang ada
+      if (!backgroundLoadingComplete && allProducts.length === 0) {
+        // Trigger background loading jika belum ada data sama sekali
+        backgroundLoadAllProducts(0);
+      }
+      // Search akan menggunakan allProducts yang tersedia
     } else {
       // Fetch page products untuk tampilan normal
       fetchPageProducts();
@@ -150,6 +212,13 @@ const PeminjamanPage = () => {
     return Math.ceil(totalProducts / itemsPerPage);
   }, [searchValue, allProducts, totalProducts]);
 
+  // Monitor background loading progress
+  useEffect(() => {
+    if (backgroundLoadingComplete && allProducts.length > 0) {
+      console.log(`Background loading completed! Total products available for search: ${allProducts.length}`);
+    }
+  }, [backgroundLoadingComplete, allProducts.length]);
+
   if (loading) {
     return (
       <Box sx={{ 
@@ -185,8 +254,7 @@ const PeminjamanPage = () => {
       maxWidth: '1400px',
       mx: 'auto',
       position: 'relative'
-    }}>
-      {/* Search Results Info */}
+    }}>      {/* Search Results Info dengan Background Loading Status */}
       {searchValue && (
         <Box sx={{ 
           mb: 3, 
@@ -200,7 +268,8 @@ const PeminjamanPage = () => {
             fontSize: '1rem',
             display: 'flex',
             alignItems: 'center',
-            gap: 1
+            gap: 1,
+            mb: !backgroundLoadingComplete ? 1 : 0
           }}>
             <SearchIcon fontSize="small" />
             Mencari: "<strong>{searchValue}</strong>" - 
@@ -208,7 +277,33 @@ const PeminjamanPage = () => {
               const filtered = filterProducts(allProducts || [], searchValue);
               return filtered.length;
             })()} hasil
+            {!backgroundLoadingComplete && allProducts.length > 0 && (
+              <Typography component="span" sx={{ 
+                color: 'rgba(255, 255, 255, 0.7)', 
+                fontSize: '0.9rem',
+                ml: 1 
+              }}>
+                ({allProducts.length} dari {totalProducts} produk dimuat)
+              </Typography>
+            )}
           </Typography>
+          
+          {!backgroundLoadingComplete && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              mt: 1 
+            }}>
+              <CircularProgress size={16} sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+              <Typography sx={{ 
+                color: 'rgba(255, 255, 255, 0.7)', 
+                fontSize: '0.85rem'
+              }}>
+                Memuat lebih banyak produk untuk pencarian yang lebih akurat...
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
