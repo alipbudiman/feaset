@@ -31,10 +31,11 @@ const App = () => {
     // Update state autentikasi
     setIsAuthenticated(false);
   };
-
   useEffect(() => {
+    console.log('App useEffect running...');
     const checkAuth = () => {
       const token = sessionStorage.getItem('token');
+      console.log('Token check:', token);
       if (token) {
         setIsAuthenticated(true);
       }
@@ -44,50 +45,68 @@ const App = () => {
     checkAuth();
   }, []);
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
   return (
     <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, logout }}>
-      <ListPinjamProvider>
-        <BrowserRouter>
-          <Toaster position="top-right" />
-          <Routes>
-            {/* Root route - redirect berdasarkan auth status */}
-            <Route 
-              path="/" 
-              element={
-                <Navigate to={isAuthenticated ? "/dashboard/peminjaman" : "/login"} replace />
-              } 
-            />
+      <div>
+        {/* Debug info */}
+        <div style={{ position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '5px', zIndex: 9999 }}>
+          Debug: Auth={isAuthenticated.toString()} Loading={isLoading.toString()}
+        </div>
+        
+        <ListPinjamProvider>
+          <BrowserRouter>
+            <Toaster position="top-right" />
+            <Routes>
+              {/* Root route - redirect berdasarkan auth status */}
+              <Route 
+                path="/" 
+                element={
+                  <Navigate to={isAuthenticated ? "/dashboard/peminjaman" : "/login"} replace />
+                } 
+              />
 
-            {/* Login route - redirect ke dashboard/peminjaman jika sudah auth */}
-            <Route 
-              path="/login" 
-              element={
-                isAuthenticated ? 
-                  <Navigate to="/dashboard/peminjaman" replace /> : 
-                  <Login setIsAuthenticated={setIsAuthenticated} />
-              } 
-            />
+              {/* Login route - redirect ke dashboard/peminjaman jika sudah auth */}
+              <Route 
+                path="/login" 
+                element={
+                  isAuthenticated ? 
+                    <Navigate to="/dashboard/peminjaman" replace /> : 
+                    <Login setIsAuthenticated={setIsAuthenticated} />
+                } 
+              />
 
-            {/* Dashboard routes - protected by auth */}
-            <Route
-              path="/dashboard/*"
-              element={
-                isAuthenticated ? 
-                  <Dashboard /> : 
-                  <Navigate to="/login" replace />
-              }
-            />
+              {/* Dashboard routes - protected by auth */}
+              <Route
+                path="/dashboard/*"
+                element={
+                  isAuthenticated ? 
+                    <Dashboard /> : 
+                    <Navigate to="/login" replace />
+                }
+              />
 
-            {/* Public routes */}
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/reset-success" element={<ResetSuccess />} />
-          </Routes>
-        </BrowserRouter>
-      </ListPinjamProvider>
+              {/* Public routes */}
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-success" element={<ResetSuccess />} />
+            </Routes>
+          </BrowserRouter>
+        </ListPinjamProvider>
+      </div>
     </AuthContext.Provider>
   );
 };
