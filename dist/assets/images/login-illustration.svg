@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Shape -->
+  <rect width="800" height="600" fill="#1e1e1e"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="400" cy="300" r="200" fill="#2196f3" opacity="0.1"/>
+  <circle cx="400" cy="300" r="150" fill="#2196f3" opacity="0.15"/>
+  <circle cx="400" cy="300" r="100" fill="#2196f3" opacity="0.2"/>
+  
+  <!-- Asset Management Icon -->
+  <g transform="translate(300,200)">
+    <!-- Building Icon -->
+    <rect x="50" y="100" width="100" height="150" rx="10" fill="#2196f3"/>
+    <rect x="70" y="120" width="20" height="20" fill="white"/>
+    <rect x="110" y="120" width="20" height="20" fill="white"/>
+    <rect x="70" y="150" width="20" height="20" fill="white"/>
+    <rect x="110" y="150" width="20" height="20" fill="white"/>
+    <rect x="70" y="180" width="20" height="20" fill="white"/>
+    <rect x="110" y="180" width="20" height="20" fill="white"/>
+    
+    <!-- Gear Icon -->
+    <circle cx="200" cy="150" r="40" fill="#2196f3"/>
+    <circle cx="200" cy="150" r="25" fill="white"/>
+    <circle cx="200" cy="150" r="15" fill="#2196f3"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="400" y="500" font-family="Arial" font-size="24" fill="white" text-anchor="middle">
+    Sistem Manajemen Aset Digital
+  </text>
+</svg> 
