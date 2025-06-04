@@ -104,10 +104,14 @@ const PeminjamanPage = () => {
         data,
         timestamp: Date.now()
       }));
+        setProducts(data.product_list || []);
+      setTotalProducts(data.total_products || 0);
       
-      setProducts(data.product_list || []);
-      setTotalProducts(data.total_products || 0);      // Start background loading untuk semua data jika ini page 1
-      if (page === 1 && !backgroundLoadingComplete) {        // Include current page data (index 0) in allProducts first
+      console.log(`📦 Fetched page ${page} data:`, data.product_list);
+      
+      // Start background loading untuk semua data jika ini page 1
+      if (page === 1 && !backgroundLoadingComplete) {
+        // Include current page data (index 0) in allProducts first
         setAllProducts(prevProducts => {
           const existingProductIds = prevProducts.map((p: Product) => p.id_product);
           const newProducts = (data.product_list || []).filter(
@@ -115,6 +119,7 @@ const PeminjamanPage = () => {
           );
           const updatedProducts = [...prevProducts, ...newProducts];
           console.log(`📦 Added ${newProducts.length} products from page 1 to search dataset. Total: ${updatedProducts.length}`);
+          console.log(`📦 Updated allProducts:`, updatedProducts);
           return updatedProducts;
         });
         
@@ -123,6 +128,22 @@ const PeminjamanPage = () => {
           console.log('Starting background loading from index 1...');
           backgroundLoadAllProducts(1);
         }, 500); // Delay 500ms agar tidak mengganggu loading page pertama
+      }
+      
+      // Also ensure current page products are always in allProducts for immediate search
+      if (data.product_list && data.product_list.length > 0) {
+        setAllProducts(prevProducts => {
+          const existingProductIds = prevProducts.map((p: Product) => p.id_product);
+          const newProducts = (data.product_list || []).filter(
+            (product: Product) => !existingProductIds.includes(product.id_product)
+          );
+          if (newProducts.length > 0) {
+            const updatedProducts = [...prevProducts, ...newProducts];
+            console.log(`📦 Ensured current page products in allProducts. Added: ${newProducts.length}, Total: ${updatedProducts.length}`);
+            return updatedProducts;
+          }
+          return prevProducts;
+        });
       }
 
     } catch (err) {
@@ -202,7 +223,7 @@ const PeminjamanPage = () => {
       // Fetch page products untuk tampilan normal
       fetchPageProducts();
     }
-  }, [searchValue, page]);  // Handle search
+  }, [searchValue, page]);// Handle search
   useEffect(() => {
     const handleSearch = (event: CustomEvent<string>) => {
       const newSearchValue = event.detail;
@@ -218,6 +239,16 @@ const PeminjamanPage = () => {
         setTimeout(() => {
           backgroundLoadAllProducts(1);
         }, 100);
+      }
+      
+      // Force immediate update if we have products but not in allProducts
+      if (newSearchValue && products.length > 0 && allProducts.length < products.length) {
+        console.log('🔍 Force updating allProducts with current products');
+        setAllProducts(prevAll => {
+          const existingIds = prevAll.map(p => p.id_product);
+          const newProducts = products.filter(p => !existingIds.includes(p.id_product));
+          return [...prevAll, ...newProducts];
+        });
       }
     };
 
@@ -239,7 +270,7 @@ const PeminjamanPage = () => {
     
     const lowerSearchTerm = searchTerm.toLowerCase().trim();
     
-    const filtered = products.filter(product => {
+    const filtered = products.filter((product) => {
       // Search by product name (primary)
       const nameMatch = product.name.toLowerCase().includes(lowerSearchTerm);
       
@@ -259,33 +290,40 @@ const PeminjamanPage = () => {
     });
     
     console.log(`🔍 Search "${searchTerm}": ${filtered.length} results from ${products.length} total products`);
+    if (filtered.length > 0) {
+      console.log(`🔍 Found products:`, filtered.map(p => p.name));
+    }
     return filtered;
-  };
-  // Filter dan tampilkan produk dengan enhanced search
+  };  // Filter dan tampilkan produk dengan enhanced search
   const displayedProducts = useMemo(() => {
     if (searchValue) {
-      // Ensure we have products to search through
-      if (allProducts.length === 0) {
-        console.log('⚠️ Search attempted but no products loaded yet');
+      // Use combined dataset: allProducts if available, otherwise fallback to current products
+      const searchDataset = allProducts.length > 0 ? allProducts : products;
+      
+      console.log(`🔍 Searching in dataset: ${searchDataset.length} products (using ${allProducts.length > 0 ? 'allProducts' : 'current products'})`);
+      
+      if (searchDataset.length === 0) {
+        console.log('⚠️ Search attempted but no products available in any dataset');
         return [];
       }
       
-      const filtered = filterProducts(allProducts || [], searchValue);
+      const filtered = filterProducts(searchDataset, searchValue);
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
       return filtered.slice(start, end);
     }
     return products || [];
   }, [searchValue, allProducts, products, page]);
-
   // Update total pages calculation with enhanced filtering
   const totalPages = useMemo(() => {
     if (searchValue) {
-      const filtered = filterProducts(allProducts || [], searchValue);
+      // Use combined dataset: allProducts if available, otherwise fallback to current products
+      const searchDataset = allProducts.length > 0 ? allProducts : products;
+      const filtered = filterProducts(searchDataset, searchValue);
       return Math.ceil(filtered.length / itemsPerPage);
     }
     return Math.ceil(totalProducts / itemsPerPage);
-  }, [searchValue, allProducts, totalProducts]);
+  }, [searchValue, allProducts, products, totalProducts]);
 
   // Monitor background loading progress
   useEffect(() => {
@@ -346,10 +384,10 @@ const PeminjamanPage = () => {
             gap: 1,
             mb: !backgroundLoadingComplete ? 1 : 0
           }}>
-            <SearchIcon fontSize="small" />
-            Mencari: "<strong>{searchValue}</strong>" - 
+            <SearchIcon fontSize="small" />            Mencari: "<strong>{searchValue}</strong>" - 
             Ditemukan {(() => {
-              const filtered = filterProducts(allProducts || [], searchValue);
+              const searchDataset = allProducts.length > 0 ? allProducts : products;
+              const filtered = filterProducts(searchDataset, searchValue);
               return filtered.length;
             })()} hasil
             {!backgroundLoadingComplete && allProducts.length > 0 && (
