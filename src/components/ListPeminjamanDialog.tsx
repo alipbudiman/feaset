@@ -29,18 +29,16 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
         : prev.filter(item => item !== id)
     );
   };
-
   const handleSelectAll = (checked: boolean) => {
-    setSelectedItems(checked ? listPinjam.map(item => item.id_product) : []);
+    setSelectedItems(checked ? (listPinjam || []).map(item => item.id_product) : []);
   };
 
   const handleDelete = () => {
     selectedItems.forEach(id => removeFromList(id));
     setSelectedItems([]);
   };
-
   const handleChangeAmount = (id: string, change: number) => {
-    const item = listPinjam.find(item => item.id_product === id);
+    const item = (listPinjam || []).find(item => item.id_product === id);
     if (item) {
       const newAmount = Math.max(0, Math.min(item.stock, item.jumlah + change));
       updateItemAmount(id, newAmount);
@@ -54,10 +52,8 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
       }
 
       const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-
-      // Filter hanya item yang diseleksi
-      const selectedProducts = listPinjam.filter(item => 
+      if (!token) throw new Error('Token tidak ditemukan');      // Filter hanya item yang diseleksi
+      const selectedProducts = (listPinjam || []).filter(item => 
         selectedItems.includes(item.id_product)
       );
 
@@ -81,11 +77,10 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
       if (!response.ok) throw new Error(data.message || 'Gagal mengajukan peminjaman');
 
       if (data.success) {
-        alert('Peminjaman berhasil diajukan!');
-        // Hapus hanya item yang berhasil diajukan
+        alert('Peminjaman berhasil diajukan!');        // Hapus hanya item yang berhasil diajukan
         selectedProducts.forEach(item => removeFromList(item.id_product));
         setSelectedItems([]);
-        if (listPinjam.length === selectedProducts.length) {
+        if ((listPinjam || []).length === selectedProducts.length) {
           onClose();
         }
       }
@@ -142,31 +137,28 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
           p: 1,
           gap: 1
         }}>
-          <Box>
-            <Checkbox 
+          <Box>            <Checkbox 
               size="small"
               sx={{ 
                 color: '#fff', 
                 '&.Mui-checked': { color: '#fff' },
                 p: 0.5
               }}
-              checked={selectedItems.length === listPinjam.length}
+              checked={selectedItems.length === (listPinjam || []).length}
               onChange={(e) => handleSelectAll(e.target.checked)}
             />
           </Box>
           <Typography color="white" fontSize={14} fontWeight="600">Nama Aset</Typography>
           <Typography color="white" fontSize={14} fontWeight="600">Jumlah</Typography>
           <Typography color="white" fontSize={14} fontWeight="600">Atur</Typography>
-        </Box>
-
-        {/* List Items */}
+        </Box>        {/* List Items */}
         <Box sx={{ p: 1 }}>
-          {listPinjam.length === 0 ? (
+          {(listPinjam || []).length === 0 ? (
             <Typography sx={{ p: 2, textAlign: 'center', fontSize: 14 }}>
               Belum ada item yang ditambahkan
             </Typography>
           ) : (
-            listPinjam.map(item => (
+            (listPinjam || []).map(item => (
               <Box 
                 key={item.id_product}
                 sx={{

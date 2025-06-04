@@ -24,18 +24,16 @@ export const useAuth = () => useContext(AuthContext);
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
-
   const logout = () => {
     // Hapus semua data sesi
     sessionStorage.clear();
     // Update state autentikasi
     setIsAuthenticated(false);
   };
+
   useEffect(() => {
-    console.log('App useEffect running...');
     const checkAuth = () => {
       const token = sessionStorage.getItem('token');
-      console.log('Token check:', token);
       if (token) {
         setIsAuthenticated(true);
       }
@@ -44,9 +42,6 @@ const App = () => {
 
     checkAuth();
   }, []);
-
-  console.log('App render - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
-
   if (isLoading) {
     return (
       <div style={{ 
@@ -60,17 +55,12 @@ const App = () => {
       </div>
     );
   }
+
   return (
     <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, logout }}>
-      <div>
-        {/* Debug info */}
-        <div style={{ position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '5px', zIndex: 9999 }}>
-          Debug: Auth={isAuthenticated.toString()} Loading={isLoading.toString()}
-        </div>
-        
-        <ListPinjamProvider>
-          <BrowserRouter>
-            <Toaster position="top-right" />
+      <ListPinjamProvider>
+        <BrowserRouter>
+          <Toaster position="top-right" />
             <Routes>
               {/* Root route - redirect berdasarkan auth status */}
               <Route 
@@ -90,8 +80,7 @@ const App = () => {
                 } 
               />
 
-              {/* Dashboard routes - protected by auth */}
-              <Route
+              {/* Dashboard routes - protected by auth */}              <Route
                 path="/dashboard/*"
                 element={
                   isAuthenticated ? 
@@ -106,7 +95,6 @@ const App = () => {
             </Routes>
           </BrowserRouter>
         </ListPinjamProvider>
-      </div>
     </AuthContext.Provider>
   );
 };

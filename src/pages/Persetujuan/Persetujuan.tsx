@@ -190,10 +190,9 @@ const Persetujuan = () => {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
-                  </TableCell>
-                  <TableCell>
+                  </TableCell>                  <TableCell>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {borrow.list_borrowing.map((item, index) => (
+                      {(borrow.list_borrowing || []).map((item, index) => (
                         <Chip
                           key={index}
                           label={`${item.product_id} (${item.amount} unit)`}

@@ -122,24 +122,23 @@ const PeminjamanPage = () => {
     window.addEventListener('searchChange', handleSearch as EventListener);
     return () => window.removeEventListener('searchChange', handleSearch as EventListener);
   }, []);
-
   // Filter dan tampilkan produk
   const displayedProducts = useMemo(() => {
     if (searchValue) {
-      const filtered = allProducts.filter(product =>
+      const filtered = (allProducts || []).filter(product =>
         product.name.toLowerCase().includes(searchValue.toLowerCase())
       );
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
       return filtered.slice(start, end);
     }
-    return products;
+    return products || [];
   }, [searchValue, allProducts, products, page]);
 
   // Update total pages calculation
   const totalPages = useMemo(() => {
     if (searchValue) {
-      const filtered = allProducts.filter(product =>
+      const filtered = (allProducts || []).filter(product =>
         product.name.toLowerCase().includes(searchValue.toLowerCase())
       );
       return Math.ceil(filtered.length / itemsPerPage);

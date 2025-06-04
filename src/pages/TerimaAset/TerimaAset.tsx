@@ -149,12 +149,11 @@ const TerimaAset = () => {
               {returnRequests.map((request, idx) => (
                 <TableRow key={request.id}>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{idx + 1}</TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{request.username}</TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    {request.list_borrowing.map(item => item.product_id).join(', ')}
+                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{request.username}</TableCell>                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                    {(request.list_borrowing || []).map(item => item.product_id).join(', ')}
                   </TableCell>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    {request.list_borrowing.reduce((sum, item) => sum + item.amount, 0)}
+                    {(request.list_borrowing || []).reduce((sum, item) => sum + item.amount, 0)}
                   </TableCell>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
                     {new Date(request.return_date).toLocaleDateString('id-ID', {

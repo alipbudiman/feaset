@@ -123,10 +123,9 @@ const Pengembalian = () => {
                       month: 'long',
                       year: 'numeric'
                     })}
-                  </TableCell>
-                  <TableCell>
+                  </TableCell>                  <TableCell>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {asset.list_borrowing.map((item, idx) => (
+                      {(asset.list_borrowing || []).map((item, idx) => (
                         <Typography key={idx}>
                           {item.product_id} ({item.amount} unit)
                         </Typography>

@@ -313,9 +313,8 @@ const BuatAkun = () => {
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>No Telepon</TableCell>
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Role</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {members.map((row) => (
+            </TableHead>            <TableBody>
+              {(members || []).map((row) => (
                 <TableRow key={row.no}>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{row.no}</TableCell>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{row.nama}</TableCell>
