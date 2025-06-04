@@ -67,9 +67,7 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
       const response = await apiService.post('/product/borrow', borrowData);
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Gagal mengajukan peminjaman');
-
-      if (data.success) {
+      if (!response.ok) throw new Error(data.message || 'Gagal mengajukan peminjaman');      if (data.success) {
         Swal.fire({
           title: "Sukses!",
           text: "Peminjaman berhasil diajukan!",
@@ -78,6 +76,11 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
         });       
         selectedProducts.forEach(item => removeFromList(item.id_product));
         setSelectedItems([]);
+        
+        // Trigger refresh data products untuk update stock
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+        console.log('🔄 Triggering data refresh after successful borrow');
+        
         if ((listPinjam || []).length === selectedProducts.length) {
           onClose();
         }

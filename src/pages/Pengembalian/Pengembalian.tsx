@@ -50,15 +50,18 @@ const Pengembalian = () => {
         id: selectedAsset.id
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      const data = await response.json();      if (data.success) {
         Swal.fire({
           title: "Sukses!",
           text: "Pengembalian berhasil diajukan!",
           icon: "success",
           confirmButtonText: "OK"
         });
+        
+        // Trigger refresh data products untuk update stock setelah pengembalian diajukan
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+        console.log('🔄 Triggering data refresh after successful return request');
+        
         fetchBorrowedAssets(); // Refresh list
       } else {
         throw new Error(data.message);

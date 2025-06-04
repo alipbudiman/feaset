@@ -81,15 +81,18 @@ const Persetujuan = () => {
       
       if (!response.ok) {
         throw new Error(data.message || 'Gagal memproses permintaan');
-      }
-
-      if (data.success) {
+      }      if (data.success) {
         Swal.fire({
           title: 'Sukses!',
           text: approve ? 'Peminjaman berhasil disetujui!' : 'Peminjaman ditolak',
           icon: 'success',
           confirmButtonText: 'OK'
         });
+        
+        // Trigger refresh data products untuk update stock setelah approve/reject
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+        console.log('🔄 Triggering data refresh after borrow approval/rejection');
+        
         fetchBorrowings(); // Refresh data
       } else {
         throw new Error(data.message);

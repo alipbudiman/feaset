@@ -57,15 +57,18 @@ const TerimaAset = () => {
           const data = await response.json();
           throw new Error(data.message || 'Gagal memproses pengembalian');
         }
-      }
-
-      Swal.fire({
+      }      Swal.fire({
         title: 'Sukses!',
         text: 'Pengembalian berhasil diterima',
         icon: 'success',
         confirmButtonText: 'OK'
       });
       setSelectedItems([]);
+      
+      // Trigger refresh data products untuk update stock setelah pengembalian
+      window.dispatchEvent(new CustomEvent('dataRefresh'));
+      console.log('🔄 Triggering data refresh after successful return acceptance');
+      
       fetchReturnRequests(); // Refresh list
     } catch (err) {
       Swal.fire({

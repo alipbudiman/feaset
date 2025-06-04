@@ -28,17 +28,47 @@ const PeminjamanPage = () => {
   const [page, setPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const [totalProducts, setTotalProducts] = useState(0);  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);
-  const itemsPerPage = 12;  // Optimasi fetch data dengan cache dan background loading
-  const fetchPageProducts = async () => {
+  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);  const itemsPerPage = 12;
+  // Function untuk force refresh semua data (clear cache dan reload)
+  const forceRefreshProducts = async () => {
+    try {
+      // Clear all related cache
+      const keysToRemove = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('products_') || key.startsWith('all_products_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => sessionStorage.removeItem(key));
+      
+      // Reset state
+      setBackgroundLoadingComplete(false);
+      setAllProducts([]);
+      
+      // Force reload current page data
+      await fetchPageProducts(true);
+      
+      // Start background loading again
+      setTimeout(() => {
+        backgroundLoadAllProducts(1);
+      }, 500);
+      
+      console.log('🔄 Products data force refreshed after stock change');
+    } catch (error) {
+      console.error('Error force refreshing products:', error);
+    }
+  };
+
+  // Optimasi fetch data dengan cache dan background loading
+  const fetchPageProducts = async (forceRefresh = false) => {
     try {
       const role = sessionStorage.getItem('userRole') || 'user';
-      
-      // Check cache first
+        // Check cache first
       const cacheKey = `products_${page}_${role}`;
       const cachedData = sessionStorage.getItem(cacheKey);
       
-      if (cachedData) {
+      if (cachedData && !forceRefresh) {
         const { data, timestamp } = JSON.parse(cachedData);
         // Cache valid for 5 minutes
         if (Date.now() - timestamp < 5 * 60 * 1000) {
@@ -157,16 +187,26 @@ const PeminjamanPage = () => {
       fetchPageProducts();
     }
   }, [searchValue, page]);
-
   // Handle search
   useEffect(() => {
     const handleSearch = (event: CustomEvent<string>) => {
       setSearchValue(event.detail);
       setPage(1);
     };
+
+    const handleDataRefresh = () => {
+      console.log('📢 Received data refresh event');
+      forceRefreshProducts();
+    };
+
     window.addEventListener('searchChange', handleSearch as EventListener);
-    return () => window.removeEventListener('searchChange', handleSearch as EventListener);
-  }, []);  // Enhanced filtering function with multiple search criteria
+    window.addEventListener('dataRefresh', handleDataRefresh as EventListener);
+    
+    return () => {
+      window.removeEventListener('searchChange', handleSearch as EventListener);
+      window.removeEventListener('dataRefresh', handleDataRefresh as EventListener);
+    };
+  }, []);// Enhanced filtering function with multiple search criteria
   const filterProducts = (products: Product[], searchTerm: string) => {
     if (!searchTerm) return products;
     

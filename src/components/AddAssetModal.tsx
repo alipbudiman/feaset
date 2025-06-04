@@ -120,15 +120,17 @@ import {
         }
   
         const responseData = await response.json();
-        console.log('Response data:', responseData);
-  
-        // Reset form
+        console.log('Response data:', responseData);        // Reset form
         setFormData({
           name: '',
           id_product: '',
           stock: '',
           image: null
         });
+
+        // Trigger refresh data products untuk update product list
+        window.dispatchEvent(new CustomEvent('dataRefresh'));
+        console.log('🔄 Triggering data refresh after successful product creation');
   
         onSuccess?.();
         onClose();
