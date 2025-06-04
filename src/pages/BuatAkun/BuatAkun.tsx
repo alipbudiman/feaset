@@ -1,6 +1,8 @@
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, MenuItem, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useState } from 'react';
+import Swal from 'sweetalert2';
+import { apiService } from '../../utils/apiService';
 
 interface Member {
   no: number;
@@ -85,7 +87,6 @@ const BuatAkun = () => {
       validatePasswordMatch(formData.password, value);
     }
   };
-
   const handleSubmit = async () => {
     try {
       const token = sessionStorage.getItem('token');
@@ -96,20 +97,13 @@ const BuatAkun = () => {
         throw new Error('Password dan konfirmasi password tidak cocok');
       }
 
-      const response = await fetch('https://manpro-mansetdig.vercel.app/user/create', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-          full_name: formData.nama,
-          address: formData.alamat,
-          phone_number: formData.noTelpon,
-          role: formData.role
-        })
+      const response = await apiService.post('/user/create', {
+        username: formData.username,
+        password: formData.password,
+        full_name: formData.nama,
+        address: formData.alamat,
+        phone_number: formData.noTelpon,
+        role: formData.role
       });
 
       const data: CreateUserResponse = await response.json();
@@ -119,7 +113,12 @@ const BuatAkun = () => {
       }
 
       if (data.success) {
-        alert('Akun berhasil dibuat!');
+        Swal.fire({
+          title: 'Sukses!',
+          text: 'Akun berhasil dibuat',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
         // Reset form
         setFormData({
           nama: '',
@@ -140,7 +139,12 @@ const BuatAkun = () => {
 
     } catch (err) {
       console.error('Error creating account:', err);
-      alert((err as Error).message);
+      Swal.fire({
+        title: 'Error',
+        text: (err as Error).message,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
     }
   };
 

@@ -4,9 +4,12 @@ import {
     TextField,
     Button,
     Box,
-    Typography
+    Typography,
+    IconButton
   } from '@mui/material';
+  import CloseIcon from '@mui/icons-material/Close';
   import { useState } from 'react';
+  import { apiService } from '../utils/apiService';
   
   interface AddAssetModalProps {
     open: boolean;
@@ -53,22 +56,12 @@ import {
         }));
       }
     };
-  
     // Add debug logging to see API response
     const uploadImage = async (file: File): Promise<string> => {
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-  
       const formData = new FormData();
       formData.append('file', file);
   
-      const response = await fetch('https://manpro-mansetdig.vercel.app/image/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData
-      });
+      const response = await apiService.uploadFile('/image/upload', formData);
   
       const data: ImageUploadResponse = await response.json();
       console.log('Image upload response:', data); // Debug log
@@ -80,15 +73,11 @@ import {
       // Return direct URL from response
       return data.data.url; // Use direct url instead of display_url
     };
-  
     const handleSubmit = async () => {
       try {
         setLoading(true);
         setError(null);
         setFieldErrors({});
-  
-        const token = sessionStorage.getItem('token');
-        if (!token) throw new Error('Token tidak ditemukan');
   
         // Upload image first if exists
         let imageUrl = '';
@@ -105,21 +94,9 @@ import {
           id_product: formData.id_product,
           stock: parseInt(formData.stock),
           image: imageUrl || 'https://via.placeholder.com/150'
-        };
+        };console.log('Mengirim data produk:', requestData);
   
-        console.log('Mengirim data produk:', requestData);
-  
-        const response = await fetch('https://manpro-mansetdig.vercel.app/product/create', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          },
-          body: JSON.stringify(requestData),
-          mode: 'cors'
-        });
+        const response = await apiService.post('/product/create', requestData);
   
         console.log('Response status:', response.status);
         
@@ -184,8 +161,7 @@ import {
           }
         }}
       >
-        {/* Header */}
-        <Box
+        {/* Header */}        <Box
           sx={{
             width: '100%',
             height: 36,
@@ -208,34 +184,25 @@ import {
           >
             Form Tambah Produk
           </Typography>
-  
-          {/* Tombol Close dengan gambar */}
-          <button
+
+          {/* Tombol Close dengan ikon X */}
+          <IconButton
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
+            sx={{
               position: 'absolute',
-              right: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '24px',
-              height: '24px'
+              right: 4,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'white',
+              width: 28,
+              height: 28,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              }
             }}
           >
-            <img 
-              src="/assets/logo/x.png"
-              alt="Close"
-              style={{
-                width: '16px',
-                height: '16px',
-                filter: 'brightness(0) invert(1)'
-              }}
-            />
-          </button>
+            <CloseIcon sx={{ fontSize: 18 }} />
+          </IconButton>
         </Box>
   
         {/* Form Content */}

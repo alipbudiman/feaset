@@ -13,6 +13,8 @@ import {
   Chip
 } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { apiService } from '../../utils/apiService';
+import Swal from 'sweetalert2';
 
 // Update interface sesuai response API
 interface BorrowingItem {
@@ -31,21 +33,14 @@ const Persetujuan = () => {
   const [borrowings, setBorrowings] = useState<BorrowingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchBorrowings = async () => {
     try {
       setLoading(true);
-      const token = sessionStorage.getItem('token');
-      console.log('Current token:', token); // Debug log
-
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/list', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
+      const response = await apiService.get('/product/borrow/list');
       const data = await response.json();
-      console.log('Borrow response:', data); // Debug log      // Jika data adalah array, gunakan langsung
+      console.log('Borrow response:', data); // Debug log
+
+      // Jika data adalah array, gunakan langsung
       if (Array.isArray(data)) {
         const validatedBorrowings = data.map((borrow: any) => ({
           ...borrow,
@@ -73,22 +68,12 @@ const Persetujuan = () => {
     }
   };
 
-  const handleApprove = async (borrowId: string, username: string, approve: boolean = true) => {
+    const handleApprove = async (borrowId: string, username: string, approve: boolean = true) => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/approved', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: username,
-          id: borrowId,
-          status: approve
-        })
+      const response = await apiService.post('/product/borrow/approved', {
+        username: username,
+        id: borrowId,
+        status: approve
       });
 
       const data = await response.json();
@@ -99,7 +84,12 @@ const Persetujuan = () => {
       }
 
       if (data.success) {
-        alert(approve ? 'Peminjaman berhasil disetujui!' : 'Peminjaman ditolak');
+        Swal.fire({
+          title: 'Sukses!',
+          text: approve ? 'Peminjaman berhasil disetujui!' : 'Peminjaman ditolak',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
         fetchBorrowings(); // Refresh data
       } else {
         throw new Error(data.message);
@@ -107,7 +97,13 @@ const Persetujuan = () => {
 
     } catch (err) {
       console.error('Error processing borrow:', err);
-      alert((err as Error).message);
+      Swal.fire({
+        title: 'Oops...',
+        text: `${(err as Error).message}`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
+      });
     }
   };
 

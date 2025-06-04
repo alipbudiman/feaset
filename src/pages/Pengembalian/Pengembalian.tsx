@@ -1,5 +1,7 @@
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Button, Paper, Dialog, DialogActions, DialogContent, DialogContentText, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { apiService } from '../../utils/apiService';
+import Swal from 'sweetalert2';
 
 interface BorrowedItem {
   product_id: string;
@@ -18,18 +20,13 @@ const Pengembalian = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<BorrowedAsset | null>(null);
-
   const fetchBorrowedAssets = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
+      const response = await apiService.get('/product/borrow/approved/list');
+      const data = await response.json();
+      console.log('Borrowed assets:', data);
 
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/approved/list', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });      const data = await response.json();
-      console.log('Borrowed assets:', data);      if (Array.isArray(data)) {
+      if (Array.isArray(data)) {
         // Validate and ensure list_borrowing is always an array
         const validatedAssets = data.map((asset: any) => ({
           ...asset,
@@ -45,35 +42,35 @@ const Pengembalian = () => {
       setLoading(false);
     }
   };
-
   const handleReturnAsset = async () => {
     try {
       if (!selectedAsset) return;
 
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/approved/return', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          id: selectedAsset.id
-        })
+      const response = await apiService.post('/product/borrow/approved/return', {
+        id: selectedAsset.id
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert('Pengembalian berhasil diajukan!');
+        Swal.fire({
+          title: "Sukses!",
+          text: "Pengembalian berhasil diajukan!",
+          icon: "success",
+          confirmButtonText: "OK"
+        });
         fetchBorrowedAssets(); // Refresh list
       } else {
         throw new Error(data.message);
       }
     } catch (err) {
-      alert((err as Error).message);
+      Swal.fire({
+        icon: "error",
+        title: "Oops...!",
+        text: `${(err as Error).message}`,
+        confirmButtonText: "OK",
+        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
+      });
     } finally {
       setOpenDialog(false);
       setSelectedAsset(null);
@@ -115,42 +112,50 @@ const Pengembalian = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Aksi</TableCell>
               </TableRow>
             </TableHead>            <TableBody>
-              {Array.isArray(assets) && assets.map((asset) => (
-                <TableRow key={asset.id}>
-                  <TableCell>{asset.id}</TableCell>
-                  <TableCell>{asset.username}</TableCell>
-                  <TableCell>
-                    {new Date(asset.date_borrowed).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </TableCell>                  <TableCell>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      {(asset.list_borrowing || []).map((item, idx) => (
-                        <Typography key={idx}>
-                          {item.product_id} ({item.amount} unit)
-                        </Typography>
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        setSelectedAsset(asset);
-                        setOpenDialog(true);
-                      }}
-                      sx={{
-                        bgcolor: '#4E71FF',
-                        '&:hover': { bgcolor: '#3c5ae0' }
-                      }}
-                    >
-                      Kembalikan
-                    </Button>
+              {!Array.isArray(assets) || assets.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    Tidak ada peminjaman yang perlu dikembalikan
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                Array.isArray(assets) && assets.map((asset) => (
+                  <TableRow key={asset.id}>
+                    <TableCell sx={{ color: '#000' }}>{asset.id}</TableCell>
+                    <TableCell sx={{ color: '#000' }}>{asset.username}</TableCell>
+                    <TableCell sx={{ color: '#000' }}>
+                      {new Date(asset.date_borrowed).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </TableCell>                    <TableCell sx={{ color: '#000' }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {(asset.list_borrowing || []).map((item, idx) => (
+                          <Typography key={idx}>
+                            {item.product_id} ({item.amount} unit)
+                          </Typography>
+                        ))}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          setSelectedAsset(asset);
+                          setOpenDialog(true);
+                        }}
+                        sx={{
+                          bgcolor: '#4E71FF',
+                          '&:hover': { bgcolor: '#3c5ae0' }
+                        }}
+                      >
+                        Kembalikan
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiService } from '../utils/apiService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -22,14 +23,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (!token) {
       return false;
-    }
-
-    try {
-      const response = await fetch('https://manpro-mansetdig.vercel.app/user/get_account', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+    }    try {
+      const response = await apiService.get('/user/get_account');
 
       if (response.ok) {
         const userData = await response.json();

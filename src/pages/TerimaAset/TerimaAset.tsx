@@ -1,6 +1,8 @@
 import { Box, Button, Checkbox, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, CircularProgress } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { validateApiResponse } from '../../utils/arrayUtils';
+import { apiService } from '../../utils/apiService';
+import Swal from 'sweetalert2';
 
 interface BorrowedProduct {
   product_id: string;
@@ -21,22 +23,16 @@ const TerimaAset = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const fetchReturnRequests = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/approved/return/accept/list', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await apiService.get('/product/borrow/approved/return/accept/list');
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Gagal mengambil data');
-      }      const data = await response.json();
+      }
+
+      const data = await response.json();
       console.log('Return requests:', data); // Debug log
       
       // Use utility function to validate and structure the data
@@ -49,23 +45,12 @@ const TerimaAset = () => {
       setLoading(false);
     }
   };
-
   const handleAcceptReturn = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');
-
       for (const id of selectedItems) {
-        const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow/approved/return/accept', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            id: id,
-            status: true
-          })
+        const response = await apiService.post('/product/borrow/approved/return/accept', {
+          id: id,
+          status: true
         });
 
         if (!response.ok) {
@@ -74,11 +59,22 @@ const TerimaAset = () => {
         }
       }
 
-      alert('Pengembalian berhasil diterima');
+      Swal.fire({
+        title: 'Sukses!',
+        text: 'Pengembalian berhasil diterima',
+        icon: 'success',
+        confirmButtonText: 'OK'
+      });
       setSelectedItems([]);
       fetchReturnRequests(); // Refresh list
     } catch (err) {
-      alert((err as Error).message);
+      Swal.fire({
+        title: 'Oops...',
+        text: `${(err as Error).message}`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
+      });
     }
   };
 
@@ -147,77 +143,85 @@ const TerimaAset = () => {
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Aksi</TableCell>
               </TableRow>
             </TableHead>            <TableBody>
-              {Array.isArray(returnRequests) && returnRequests.map((request, idx) => (
-                <TableRow key={request.id}>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{idx + 1}</TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{request.username}</TableCell>                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    {(request.list_borrowing || []).map(item => item.product_id).join(', ')}
-                  </TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    {(request.list_borrowing || []).reduce((sum, item) => sum + item.amount, 0)}
-                  </TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    {new Date(request.return_date).toLocaleDateString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
-                  </TableCell>
-                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
-                    <Checkbox
-                      checked={selectedItems.includes(request.id)}
-                      onChange={(e) => {
-                        setSelectedItems(prev => 
-                          e.target.checked
-                            ? [...prev, request.id]
-                            : prev.filter(id => id !== request.id)
-                        );
-                      }}
-                      sx={{
-                        color: selectedItems.includes(request.id) ? '#2ecc40' : '#222',
-                        '&.Mui-checked': {
-                          color: '#2ecc40',
-                        },
-                        '& .MuiSvgIcon-root': {
-                          fontSize: 28,
-                        },
-                        verticalAlign: 'middle'
-                      }}
-                      icon={<span style={{
-                        display: 'inline-block',
-                        width: 24,
-                        height: 24,
-                        border: '2px solid #222',
-                        borderRadius: 4,
-                        background: '#fff'
-                      }} />}
-                      checkedIcon={<span style={{
-                        display: 'flex',
-                        width: 24,
-                        height: 24,
-                        border: '2px solid #2ecc40',
-                        borderRadius: 4,
-                        background: '#2ecc40',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <svg width="18" height="18" viewBox="0 0 18 18">
-                          <polyline
-                            points="4,10 8,14 14,6"
-                            style={{
-                              fill: 'none',
-                              stroke: '#fff',
-                              strokeWidth: 2.5,
-                              strokeLinecap: 'round',
-                              strokeLinejoin: 'round'
-                            }}
-                          />
-                        </svg>
-                      </span>}
-                    />
+              {!Array.isArray(returnRequests) || returnRequests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                    Tidak ada permintaan pengembalian aset
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                Array.isArray(returnRequests) && returnRequests.map((request, idx) => (
+                  <TableRow key={request.id}>
+                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16, color: '#000' }}>{idx + 1}</TableCell>
+                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16, color: '#000' }}>{request.username}</TableCell>                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16, color: '#000' }}>
+                      {(request.list_borrowing || []).map(item => item.product_id).join(', ')}
+                    </TableCell>
+                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16, color: '#000' }}>
+                      {(request.list_borrowing || []).reduce((sum, item) => sum + item.amount, 0)}
+                    </TableCell>
+                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16, color: '#000' }}>
+                      {new Date(request.return_date).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
+                    </TableCell>
+                    <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <Checkbox
+                        checked={selectedItems.includes(request.id)}
+                        onChange={(e) => {
+                          setSelectedItems(prev => 
+                            e.target.checked
+                              ? [...prev, request.id]
+                              : prev.filter(id => id !== request.id)
+                          );
+                        }}
+                        sx={{
+                          color: selectedItems.includes(request.id) ? '#2ecc40' : '#222',
+                          '&.Mui-checked': {
+                            color: '#2ecc40',
+                          },
+                          '& .MuiSvgIcon-root': {
+                            fontSize: 28,
+                          },
+                          verticalAlign: 'middle'
+                        }}
+                        icon={<span style={{
+                          display: 'inline-block',
+                          width: 24,
+                          height: 24,
+                          border: '2px solid #222',
+                          borderRadius: 4,
+                          background: '#fff'
+                        }} />}
+                        checkedIcon={<span style={{
+                          display: 'flex',
+                          width: 24,
+                          height: 24,
+                          border: '2px solid #2ecc40',
+                          borderRadius: 4,
+                          background: '#2ecc40',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 18 18">
+                            <polyline
+                              points="4,10 8,14 14,6"
+                              style={{
+                                fill: 'none',
+                                stroke: '#fff',
+                                strokeWidth: 2.5,
+                                strokeLinecap: 'round',
+                                strokeLinejoin: 'round'
+                              }}
+                            />
+                          </svg>
+                        </span>}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

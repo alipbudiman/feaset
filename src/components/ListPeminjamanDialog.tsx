@@ -11,6 +11,8 @@ import { useListPinjam } from '../context/ListPinjamContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
+import Swal from 'sweetalert2';
+import { apiService } from '../utils/apiService';
 
 interface ListPeminjamanDialogProps {
   open: boolean;
@@ -44,15 +46,13 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
       updateItemAmount(id, newAmount);
     }
   };
-
   const handleSubmitBorrow = async () => {
     try {
       if (selectedItems.length === 0) {
         throw new Error('Pilih item yang akan diajukan');
       }
 
-      const token = sessionStorage.getItem('token');
-      if (!token) throw new Error('Token tidak ditemukan');      // Filter hanya item yang diseleksi
+      // Filter hanya item yang diseleksi
       const selectedProducts = (listPinjam || []).filter(item => 
         selectedItems.includes(item.id_product)
       );
@@ -64,20 +64,18 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
         }))
       };
 
-      const response = await fetch('https://manpro-mansetdig.vercel.app/product/borrow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(borrowData)
-      });
+      const response = await apiService.post('/product/borrow', borrowData);
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Gagal mengajukan peminjaman');
 
       if (data.success) {
-        alert('Peminjaman berhasil diajukan!');        // Hapus hanya item yang berhasil diajukan
+        Swal.fire({
+          title: "Sukses!",
+          text: "Peminjaman berhasil diajukan!",
+          icon: "success",
+          confirmButtonText: "OK"
+        });       
         selectedProducts.forEach(item => removeFromList(item.id_product));
         setSelectedItems([]);
         if ((listPinjam || []).length === selectedProducts.length) {
@@ -85,7 +83,13 @@ const ListPeminjamanDialog = ({ open, onClose, anchorEl }: ListPeminjamanDialogP
         }
       }
     } catch (error) {
-      alert((error as Error).message);
+      Swal.fire({
+        icon: "error",
+        title: "Oops...!",
+        text: `${(error as Error).message}`,
+        confirmButtonText: "OK",
+        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
+      });
     }
   };
 

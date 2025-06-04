@@ -10,6 +10,7 @@ import Pengembalian from '../Pengembalian/Pengembalian';
 import BuatAkun from '../BuatAkun/BuatAkun';
 import TerimaAset from '../TerimaAset/TerimaAset';
 import Persetujuan from '../Persetujuan/Persetujuan';
+import { apiService } from '../../utils/apiService';
 
 interface Product {
   name: string;
@@ -28,12 +29,9 @@ const PeminjamanPage = () => {
   const [searchValue, setSearchValue] = useState('');
   const [totalProducts, setTotalProducts] = useState(0);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const itemsPerPage = 12;
-
-  // Optimasi fetch data dengan cache
+  const itemsPerPage = 12;  // Optimasi fetch data dengan cache
   const fetchPageProducts = async () => {
     try {
-      const token = sessionStorage.getItem('token');
       const role = sessionStorage.getItem('userRole') || 'user';
       
       // Check cache first
@@ -52,13 +50,7 @@ const PeminjamanPage = () => {
 
       setLoading(true);
       
-      const response = await fetch(`https://manpro-mansetdig.vercel.app/product/list?index=${page-1}&role=${role}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Cache-Control': 'no-store'
-        }
-      });
+      const response = await apiService.get(`/product/list?index=${page-1}&role=${role}`);
 
       if (!response.ok) throw new Error('Gagal mengambil data');
       
@@ -77,21 +69,13 @@ const PeminjamanPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Ubah cara fetch all products
+  };  // Ubah cara fetch all products
   const fetchAllProducts = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
+      if (!sessionStorage.getItem('token')) return;
       
       const role = sessionStorage.getItem('userRole') || 'user';
-      const response = await fetch(`https://manpro-mansetdig.vercel.app/product/list?role=${role}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
+      const response = await apiService.get(`/product/list?role=${role}`);
       
       const data = await response.json();
       setAllProducts(data.product_list || []);
@@ -305,14 +289,8 @@ const Dashboard = () => {
       if (!token) {
         navigate('/login');
         return;
-      }
-
-      try {
-        const response = await fetch('https://manpro-mansetdig.vercel.app/user/get_account', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+      }      try {
+        const response = await apiService.get('/user/get_account');
 
         if (response.ok) {
           const data = await response.json();

@@ -8,6 +8,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { toast } from 'react-hot-toast';
+import { apiService } from '../../utils/apiService';
 
 interface LoginProps {
   setIsAuthenticated: (value: boolean) => void;
@@ -32,7 +33,6 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
   const handleTogglePassword = () => {
     setShowPassword(!showPassword);
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -40,13 +40,7 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
       formBody.append('username', formData.username);
       formBody.append('password', formData.password);
 
-      const response = await fetch('https://manpro-mansetdig.vercel.app/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formBody
-      });
+      const response = await apiService.login('/auth/login', formBody);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -59,13 +53,14 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
         // Simpan token tanpa enkripsi
         sessionStorage.setItem('token', data.access_token);
         
-        // Get user data
+        // Also save refresh token if provided
+        if (data.refresh_token) {
+          sessionStorage.setItem('refresh_token', data.refresh_token);
+        }
+        
+        // Get user data using apiService
         try {
-          const userResponse = await fetch('https://manpro-mansetdig.vercel.app/user/get_account', {
-            headers: {
-              'Authorization': `Bearer ${data.access_token}`
-            }
-          });
+          const userResponse = await apiService.get('/user/get_account');
 
           if (!userResponse.ok) {
             throw new Error('Gagal mengambil data user');
