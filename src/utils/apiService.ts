@@ -269,6 +269,19 @@ class ApiService {
       body: body,
     });
   }
+
+  /**
+   * Health check request (no authentication required)
+   */
+  async healthCheck(): Promise<Response> {
+    const url = `${HOST}/health`;
+    return fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+    });
+  }
 }
 
 // Export a singleton instance
