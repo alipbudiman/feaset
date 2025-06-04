@@ -73,10 +73,9 @@ const ResetPassword = () => {
           boxShadow: '-4px 4px 4px 0px #00000040',
           overflow: 'hidden'
         }}
-      >
-        <Box
+      >        <Box
           component="img"
-          src="/src/assets/Rectangle/Rectangle 6.png"
+          src="/assets/Rectangle/Rectangle 6.png"
           alt="Rectangle 6 Background"
           sx={{
             width: '100%',
@@ -102,10 +101,9 @@ const ResetPassword = () => {
               cursor: 'pointer',
               padding: 0
             }}
-          >
-            <Box
+          >            <Box
               component="img"
-              src="/src/assets/form login dan forgot dan animasi/Subtract.png"
+              src="/assets/form login dan forgot dan animasi/Subtract.png"
               sx={{ width: 24, height: 24 }}
             />
           </Box>
@@ -180,7 +178,7 @@ const ResetPassword = () => {
                               <InputAdornment position="start">
                                 <Box 
                                   component="img" 
-                                  src="/src/assets/form login dan forgot dan animasi/person-fill.png"
+                                  src="/assets/form login dan forgot dan animasi/person-fill.png"
                                   sx={{ width: 20, height: 20 }}
                                 />
                               </InputAdornment>
@@ -208,7 +206,7 @@ const ResetPassword = () => {
                               <InputAdornment position="start">
                                 <Box 
                                   component="img" 
-                                  src="/src/assets/form login dan forgot dan animasi/call.png"
+                                  src="/assets/form login dan forgot dan animasi/call.png"
                                   sx={{ width: 20, height: 20 }}
                                 />
                               </InputAdornment>
@@ -236,7 +234,7 @@ const ResetPassword = () => {
                               <InputAdornment position="end">
                                 <Box 
                                   component="img" 
-                                  src="/src/assets/form login dan forgot dan animasi/send-fill.png"
+                                  src="/assets/form login dan forgot dan animasi/send-fill.png"
                                   sx={{ 
                                     width: 20, 
                                     height: 20,
@@ -306,12 +304,11 @@ const ResetPassword = () => {
                                     display: 'flex',
                                     alignItems: 'center'
                                   }}
-                                >
-                                  <Box
+                                >                                  <Box
                                     component="img"
                                     src={showPassword 
-                                      ? "/src/assets/form login dan forgot dan animasi/eye-fill.png"
-                                      : "/src/assets/form login dan forgot dan animasi/eye-slash-fill.png"}
+                                      ? "/assets/form login dan forgot dan animasi/eye-fill.png"
+                                      : "/assets/form login dan forgot dan animasi/eye-slash-fill.png"}
                                     sx={{ 
                                       width: 20, 
                                       height: 20,
@@ -360,12 +357,11 @@ const ResetPassword = () => {
                                     display: 'flex',
                                     alignItems: 'center'
                                   }}
-                                >
-                                  <Box
+                                >                                <Box
                                     component="img"
                                     src={showConfirmPassword 
-                                      ? "/src/assets/form login dan forgot dan animasi/eye-fill.png"
-                                      : "/src/assets/form login dan forgot dan animasi/eye-slash-fill.png"}
+                                      ? "/assets/form login dan forgot dan animasi/eye-fill.png"
+                                      : "/assets/form login dan forgot dan animasi/eye-slash-fill.png"}
                                     sx={{ 
                                       width: 20, 
                                       height: 20,
@@ -438,10 +434,9 @@ const ResetPassword = () => {
           alignItems: 'center',
           justifyContent: 'center'
         }}
-      >
-        <Box
+      >        <Box
           component="img"
-          src="/src/assets/Rectangle/Rectangle 8.png"
+          src="/assets/Rectangle/Rectangle 8.png"
           alt="Rectangle 8 Background"
           sx={{
             width: '100%',
@@ -477,10 +472,9 @@ const ResetPassword = () => {
             }}
           >
             ASETARY
-          </Typography>
-          <Box
+          </Typography>          <Box
             component="img"
-            src="/src/assets/form login dan forgot dan animasi/solar_library-bold.png"
+            src="/assets/form login dan forgot dan animasi/solar_library-bold.png"
             alt="Library Icon"
             sx={{
               width: '140px',

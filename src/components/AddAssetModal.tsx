@@ -227,7 +227,7 @@ import {
             }}
           >
             <img 
-              src="/src/assets/logo/x.png"
+              src="/assets/logo/x.png"
               alt="Close"
               style={{
                 width: '16px',

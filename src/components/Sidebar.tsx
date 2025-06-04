@@ -13,31 +13,31 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     label: 'Peminjaman Aset',
-    icon: '/src/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/peminjaman.png',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/peminjaman.png',
     roles: ['user', 'admin', 'master'],
     path: '/dashboard/peminjaman'
   },
   {
     label: 'Pengembalian Aset',
-    icon: '/src/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/pengembalian.png',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/pengembalian.png',
     roles: ['user', 'admin', 'master'],
     path: '/dashboard/pengembalian'
   },
   {
     label: 'Buat Akun',
-    icon: '/src/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/buatakun.png',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/buatakun.png',
     roles: ['admin', 'master'],
     path: '/dashboard/buat-akun'
   },
   {
     label: 'Terima Aset',
-    icon: '/src/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/terima.png',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/terima.png',
     roles: ['admin', 'master'],
     path: '/dashboard/terima-aset'
   },
   {
     label: 'Persetujuan Aset',
-    icon: '/src/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/persetujuan.png',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/persetujuan.png',
     roles: ['master'],
     path: '/dashboard/persetujuan'
   }
@@ -128,7 +128,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
         flexShrink: 0
       }}>
         <img 
-          src="/src/assets/logo/logo.png" 
+          src="/assets/logo/logo.png" 
           alt="Logo" 
           style={{ 
             height: '40px',

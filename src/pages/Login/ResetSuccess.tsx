@@ -30,10 +30,9 @@ const ResetSuccess = () => {
           boxShadow: '-4px 4px 4px 0px #00000040',
           overflow: 'hidden'
         }}
-      >
-        <Box
+      >        <Box
           component="img"
-          src="/src/assets/Rectangle/Rectangle 6.png"
+          src="/assets/Rectangle/Rectangle 6.png"
           alt="Rectangle 6 Background"
           sx={{
             width: '100%',
@@ -133,10 +132,9 @@ const ResetSuccess = () => {
           alignItems: 'center',
           justifyContent: 'center'
         }}
-      >
-        <Box
+      >        <Box
           component="img"
-          src="/src/assets/Rectangle/Rectangle 8.png"
+          src="/assets/Rectangle/Rectangle 8.png"
           alt="Rectangle 8 Background"
           sx={{
             width: '100%',
@@ -172,10 +170,9 @@ const ResetSuccess = () => {
             }}
           >
             ASETARY
-          </Typography>
-          <Box
+          </Typography>          <Box
             component="img"
-            src="/src/assets/form login dan forgot dan animasi/solar_library-bold.png"
+            src="/assets/form login dan forgot dan animasi/solar_library-bold.png"
             alt="Library Icon"
             sx={{
               width: '140px',
