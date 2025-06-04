@@ -330,10 +330,8 @@ import {
                   {formData.image ? formData.image.name : 'Nama file gambar'}
                 </Typography>
               </Box>
-            </Box>
-  
-            {/* Tombol Tambah */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 0.5 }}>
+            </Box>            {/* Tombol Tambah dan Batal */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1, mt: 0.5 }}>
               <Button
                 variant="contained"
                 onClick={handleSubmit}
@@ -358,6 +356,34 @@ import {
                 }}
               >
                 {loading ? 'Menambahkan...' : 'Tambah'}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={onClose}
+                disabled={loading}
+                sx={{
+                  minWidth: 'unset',
+                  height: 28,
+                  fontSize: '13px',
+                  borderColor: '#142356',
+                  color: '#142356',
+                  textTransform: 'none',
+                  borderRadius: '5px',
+                  boxShadow: 'none',
+                  px: 3,
+                  '&:hover': {
+                    borderColor: '#1a2d6e',
+                    color: '#1a2d6e',
+                    bgcolor: 'rgba(20, 35, 86, 0.04)',
+                    boxShadow: 'none'
+                  },
+                  '&.Mui-disabled': {
+                    borderColor: 'rgba(20, 35, 86, 0.3)',
+                    color: 'rgba(20, 35, 86, 0.3)'
+                  }
+                }}
+              >
+                Batal
               </Button>
             </Box>
           </Box>

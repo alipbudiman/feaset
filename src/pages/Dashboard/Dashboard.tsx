@@ -2,6 +2,7 @@ import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
 import AssetCard from '../../components/AssetCard';
 import { Box, CircularProgress, Typography, IconButton, Button } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { useEffect, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -103,13 +104,36 @@ const PeminjamanPage = () => {
     };
     window.addEventListener('searchChange', handleSearch as EventListener);
     return () => window.removeEventListener('searchChange', handleSearch as EventListener);
-  }, []);
-  // Filter dan tampilkan produk
+  }, []);  // Enhanced filtering function with multiple search criteria
+  const filterProducts = (products: Product[], searchTerm: string) => {
+    if (!searchTerm) return products;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    
+    return products.filter(product => {
+      // Search by product name (primary)
+      const nameMatch = product.name.toLowerCase().includes(lowerSearchTerm);
+      
+      // Search by product ID (secondary)  
+      const idMatch = product.id_product.toLowerCase().includes(lowerSearchTerm);
+      
+      // Search by exact stock number (if search term is numeric)
+      const stockMatch = !isNaN(Number(lowerSearchTerm)) && 
+        product.stock.toString() === lowerSearchTerm;
+      
+      // Search for products with stock status
+      const stockStatusMatch = 
+        (lowerSearchTerm.includes('habis') || lowerSearchTerm.includes('kosong')) && product.stock === 0 ||
+        (lowerSearchTerm.includes('tersedia') || lowerSearchTerm.includes('ada')) && product.stock > 0;
+      
+      return nameMatch || idMatch || stockMatch || stockStatusMatch;
+    });
+  };
+
+  // Filter dan tampilkan produk dengan enhanced search
   const displayedProducts = useMemo(() => {
     if (searchValue) {
-      const filtered = (allProducts || []).filter(product =>
-        product.name.toLowerCase().includes(searchValue.toLowerCase())
-      );
+      const filtered = filterProducts(allProducts || [], searchValue);
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
       return filtered.slice(start, end);
@@ -117,12 +141,10 @@ const PeminjamanPage = () => {
     return products || [];
   }, [searchValue, allProducts, products, page]);
 
-  // Update total pages calculation
+  // Update total pages calculation with enhanced filtering
   const totalPages = useMemo(() => {
     if (searchValue) {
-      const filtered = (allProducts || []).filter(product =>
-        product.name.toLowerCase().includes(searchValue.toLowerCase())
-      );
+      const filtered = filterProducts(allProducts || [], searchValue);
       return Math.ceil(filtered.length / itemsPerPage);
     }
     return Math.ceil(totalProducts / itemsPerPage);
@@ -164,6 +186,32 @@ const PeminjamanPage = () => {
       mx: 'auto',
       position: 'relative'
     }}>
+      {/* Search Results Info */}
+      {searchValue && (
+        <Box sx={{ 
+          mb: 3, 
+          bgcolor: 'rgba(255, 255, 255, 0.1)', 
+          borderRadius: 2, 
+          p: 2,
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }}>
+          <Typography sx={{ 
+            color: '#fff', 
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <SearchIcon fontSize="small" />
+            Mencari: "<strong>{searchValue}</strong>" - 
+            Ditemukan {(() => {
+              const filtered = filterProducts(allProducts || [], searchValue);
+              return filtered.length;
+            })()} hasil
+          </Typography>
+        </Box>
+      )}
+
       {loading ? (
         <Box sx={{ 
           display: 'flex', 
@@ -172,6 +220,46 @@ const PeminjamanPage = () => {
           minHeight: '400px'
         }}>
           <CircularProgress />
+        </Box>      ) : displayedProducts.length === 0 && searchValue ? (
+        <Box sx={{ 
+          textAlign: 'center', 
+          mt: 4,
+          bgcolor: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: 2,
+          p: 4,
+          maxWidth: '600px',
+          mx: 'auto'
+        }}>
+          <Typography 
+            sx={{ 
+              color: '#fff',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              mb: 2
+            }}
+          >
+            Tidak ada hasil untuk "{searchValue}"
+          </Typography>
+          <Typography 
+            sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: '1rem',
+              mb: 2
+            }}
+          >
+            Coba gunakan kata kunci lain atau gunakan tips pencarian:
+          </Typography>
+          <Box sx={{ 
+            textAlign: 'left', 
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '0.9rem',
+            lineHeight: 1.6
+          }}>
+            <Typography>• Cari berdasarkan nama produk (contoh: "laptop")</Typography>
+            <Typography>• Cari berdasarkan ID produk (contoh: "LT001")</Typography>
+            <Typography>• Cari berdasarkan stok (contoh: "10")</Typography>
+            <Typography>• Cari status stok (contoh: "habis", "tersedia")</Typography>
+          </Box>
         </Box>
       ) : products.length === 0 ? (
         <Typography 
@@ -182,7 +270,7 @@ const PeminjamanPage = () => {
             mt: 4 
           }}
         >
-          Tidak ada produk yang sesuai dengan pencarian "{searchValue}"
+          Tidak ada produk yang tersedia
         </Typography>
       ) : (
         <>

@@ -12,6 +12,7 @@ import {
   ListItemIcon
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -54,11 +55,15 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
     sessionStorage.clear();
     window.location.href = '/login';
   };
-
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchValue(value);
     window.dispatchEvent(new CustomEvent('searchChange', { detail: value }));
+  };
+
+  const handleClearSearch = () => {
+    setSearchValue('');
+    window.dispatchEvent(new CustomEvent('searchChange', { detail: '' }));
   };
 
   useEffect(() => {
@@ -125,10 +130,8 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
           '&:focus-within': {
             boxShadow: '0 0 0 2px #4E71FF'
           }
-        }}>
-          <SearchIcon sx={{ color: '#222', mr: 2 }} />
-          <InputBase
-            placeholder="Telusuri aset..."
+        }}>          <SearchIcon sx={{ color: '#222', mr: 2 }} />          <InputBase
+            placeholder="Cari by nama, ID, stok, atau status..."
             value={searchValue}
             onChange={handleSearchChange}
             sx={{
@@ -140,6 +143,22 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
               }
             }}
           />
+          {searchValue && (
+            <IconButton
+              onClick={handleClearSearch}
+              sx={{
+                color: '#666',
+                p: 0.5,
+                ml: 1,
+                '&:hover': {
+                  color: '#222',
+                  bgcolor: 'rgba(0,0,0,0.04)'
+                }
+              }}
+            >
+              <ClearIcon fontSize="small" />
+            </IconButton>
+          )}
         </Box>
 
         {/* Right side content with fixed position */}
