@@ -89,9 +89,16 @@ const Persetujuan = () => {
           confirmButtonText: 'OK'
         });
         
-        // Trigger refresh data products untuk update stock setelah approve/reject
+        // Enhanced logging and trigger refresh data products untuk update stock setelah approve/reject
+        console.log('🔄 Triggering data refresh after borrow approval/rejection', {
+          approve,
+          borrowId,
+          username,
+          action: approve ? 'approval' : 'rejection'
+        });
+        
         window.dispatchEvent(new CustomEvent('dataRefresh'));
-        console.log('🔄 Triggering data refresh after borrow approval/rejection');
+        console.log('📡 dataRefresh event dispatched successfully');
         
         fetchBorrowings(); // Refresh data
       } else {

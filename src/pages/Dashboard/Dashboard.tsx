@@ -28,10 +28,11 @@ const PeminjamanPage = () => {
   const [page, setPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const [totalProducts, setTotalProducts] = useState(0);  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);  const itemsPerPage = 12;
-  // Function untuk force refresh semua data (clear cache dan reload)
+  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);  const itemsPerPage = 12;  // Function untuk force refresh semua data (clear cache dan reload)
   const forceRefreshProducts = async () => {
     try {
+      console.log('🚀 Starting force refresh of products data...');
+      
       // Clear all related cache
       const keysToRemove = [];
       for (let i = 0; i < sessionStorage.length; i++) {
@@ -41,21 +42,25 @@ const PeminjamanPage = () => {
         }
       }
       keysToRemove.forEach(key => sessionStorage.removeItem(key));
+      console.log('🗑️ Cleared cache keys:', keysToRemove);
       
       // Reset state
       setBackgroundLoadingComplete(false);
       setAllProducts([]);
+      console.log('🔄 Reset background loading state and products');
       
       // Force reload current page data
+      console.log('📄 Force reloading current page data...');
       await fetchPageProducts(true);
         // Start background loading again
       setTimeout(() => {
+        console.log('🔄 Starting background loading again...');
         backgroundLoadAllProducts(0); // Start from index 0 to include first page
       }, 500);
       
-      console.log('🔄 Products data force refreshed after stock change');
+      console.log('✅ Products data force refreshed successfully after stock change');
     } catch (error) {
-      console.error('Error force refreshing products:', error);
+      console.error('❌ Error force refreshing products:', error);
     }
   };
 
@@ -250,19 +255,25 @@ const PeminjamanPage = () => {
           return [...prevAll, ...newProducts];
         });
       }
-    };
-
-    const handleDataRefresh = () => {
-      console.log('📢 Received data refresh event');
+    };    const handleDataRefresh = () => {
+      console.log('📢 Received data refresh event in PeminjamanPage');
+      forceRefreshProducts();
+    };    const handlePeminjamanDataRefresh = () => {
+      console.log('🏠 Received peminjaman-specific data refresh event');
+      console.log('🏠 Force refreshing PeminjamanPage products data...');
       forceRefreshProducts();
     };
 
+    console.log('🎧 Setting up event listeners in PeminjamanPage');
     window.addEventListener('searchChange', handleSearch as EventListener);
     window.addEventListener('dataRefresh', handleDataRefresh as EventListener);
+    window.addEventListener('peminjamanDataRefresh', handlePeminjamanDataRefresh as EventListener);
     
     return () => {
+      console.log('🧹 Cleaning up event listeners in PeminjamanPage');
       window.removeEventListener('searchChange', handleSearch as EventListener);
       window.removeEventListener('dataRefresh', handleDataRefresh as EventListener);
+      window.removeEventListener('peminjamanDataRefresh', handlePeminjamanDataRefresh as EventListener);
     };
   }, [allProducts.length, products]);// Enhanced filtering function with multiple search criteria
   const filterProducts = (products: Product[], searchTerm: string) => {
@@ -606,6 +617,26 @@ const Dashboard = () => {
 
     fetchUserRole();
   }, [navigate]);
+  // Add global data refresh listener at Dashboard level
+  useEffect(() => {
+    const handleGlobalDataRefresh = () => {
+      console.log('🌐 Global data refresh triggered from Dashboard level');
+      console.log('🗺️ Current location:', location.pathname);
+      
+      // Always dispatch the peminjaman refresh event regardless of current route
+      // This ensures PeminjamanPage data gets refreshed when user navigates back to it
+      window.dispatchEvent(new CustomEvent('peminjamanDataRefresh'));
+      console.log('📢 peminjamanDataRefresh event dispatched from Dashboard');
+    };
+
+    console.log('🎯 Setting up global dataRefresh listener in Dashboard');
+    window.addEventListener('dataRefresh', handleGlobalDataRefresh);
+    
+    return () => {
+      console.log('🧹 Cleaning up global dataRefresh listener in Dashboard');
+      window.removeEventListener('dataRefresh', handleGlobalDataRefresh);
+    };
+  }, [location.pathname]);
 
   useEffect(() => {
     if (location.pathname === '/dashboard') {
