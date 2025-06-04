@@ -48,10 +48,9 @@ const PeminjamanPage = () => {
       
       // Force reload current page data
       await fetchPageProducts(true);
-      
-      // Start background loading again
+        // Start background loading again
       setTimeout(() => {
-        backgroundLoadAllProducts(1);
+        backgroundLoadAllProducts(0); // Start from index 0 to include first page
       }, 500);
       
       console.log('🔄 Products data force refreshed after stock change');
@@ -74,9 +73,18 @@ const PeminjamanPage = () => {
         if (Date.now() - timestamp < 5 * 60 * 1000) {
           setProducts(data.product_list);
           setTotalProducts(data.total_products);
-          
-          // Start background loading jika belum complete dan ini page 1
-          if (page === 1 && !backgroundLoadingComplete) {
+            // Start background loading jika belum complete dan ini page 1
+          if (page === 1 && !backgroundLoadingComplete) {            // Include cached data (index 0) in allProducts first
+            setAllProducts(prevProducts => {
+              const existingProductIds = prevProducts.map((p: Product) => p.id_product);
+              const newProducts = (data.product_list || []).filter(
+                (product: Product) => !existingProductIds.includes(product.id_product)
+              );
+              const updatedProducts = [...prevProducts, ...newProducts];
+              console.log(`📦 Added ${newProducts.length} cached products from page 1 to search dataset. Total: ${updatedProducts.length}`);
+              return updatedProducts;
+            });
+            
             backgroundLoadAllProducts(1); // Start from index 1 since we already have index 0
           }
           return;
@@ -98,9 +106,18 @@ const PeminjamanPage = () => {
       }));
       
       setProducts(data.product_list || []);
-      setTotalProducts(data.total_products || 0);
-        // Start background loading untuk semua data jika ini page 1
-      if (page === 1 && !backgroundLoadingComplete) {
+      setTotalProducts(data.total_products || 0);      // Start background loading untuk semua data jika ini page 1
+      if (page === 1 && !backgroundLoadingComplete) {        // Include current page data (index 0) in allProducts first
+        setAllProducts(prevProducts => {
+          const existingProductIds = prevProducts.map((p: Product) => p.id_product);
+          const newProducts = (data.product_list || []).filter(
+            (product: Product) => !existingProductIds.includes(product.id_product)
+          );
+          const updatedProducts = [...prevProducts, ...newProducts];
+          console.log(`📦 Added ${newProducts.length} products from page 1 to search dataset. Total: ${updatedProducts.length}`);
+          return updatedProducts;
+        });
+        
         // Start background loading from next index
         setTimeout(() => {
           console.log('Starting background loading from index 1...');
@@ -172,13 +189,12 @@ const PeminjamanPage = () => {
     } catch (err) {
       console.error('Error in background loading:', err);
     }
-  };
-  // Optimasi useEffect untuk loading data
+  };  // Optimasi useEffect untuk loading data
   useEffect(() => {
     if (searchValue) {
       // Jika sedang search dan background loading belum complete, tunggu atau gunakan data yang ada
       if (!backgroundLoadingComplete && allProducts.length === 0) {
-        // Trigger background loading jika belum ada data sama sekali
+        // Trigger background loading jika belum ada data sama sekali, mulai dari index 0
         backgroundLoadAllProducts(0);
       }
       // Search akan menggunakan allProducts yang tersedia
@@ -186,12 +202,23 @@ const PeminjamanPage = () => {
       // Fetch page products untuk tampilan normal
       fetchPageProducts();
     }
-  }, [searchValue, page]);
-  // Handle search
+  }, [searchValue, page]);  // Handle search
   useEffect(() => {
     const handleSearch = (event: CustomEvent<string>) => {
-      setSearchValue(event.detail);
+      const newSearchValue = event.detail;
+      setSearchValue(newSearchValue);
       setPage(1);
+      
+      // If user starts searching and we don't have all products yet, 
+      // ensure we at least have the first page products included
+      if (newSearchValue && allProducts.length === 0 && products.length > 0) {
+        console.log('🔍 Starting search - ensuring first page products are included');
+        setAllProducts(products);
+        // Then start background loading from index 1
+        setTimeout(() => {
+          backgroundLoadAllProducts(1);
+        }, 100);
+      }
     };
 
     const handleDataRefresh = () => {
@@ -206,13 +233,13 @@ const PeminjamanPage = () => {
       window.removeEventListener('searchChange', handleSearch as EventListener);
       window.removeEventListener('dataRefresh', handleDataRefresh as EventListener);
     };
-  }, []);// Enhanced filtering function with multiple search criteria
+  }, [allProducts.length, products]);// Enhanced filtering function with multiple search criteria
   const filterProducts = (products: Product[], searchTerm: string) => {
     if (!searchTerm) return products;
     
     const lowerSearchTerm = searchTerm.toLowerCase().trim();
     
-    return products.filter(product => {
+    const filtered = products.filter(product => {
       // Search by product name (primary)
       const nameMatch = product.name.toLowerCase().includes(lowerSearchTerm);
       
@@ -230,11 +257,19 @@ const PeminjamanPage = () => {
       
       return nameMatch || idMatch || stockMatch || stockStatusMatch;
     });
+    
+    console.log(`🔍 Search "${searchTerm}": ${filtered.length} results from ${products.length} total products`);
+    return filtered;
   };
-
   // Filter dan tampilkan produk dengan enhanced search
   const displayedProducts = useMemo(() => {
     if (searchValue) {
+      // Ensure we have products to search through
+      if (allProducts.length === 0) {
+        console.log('⚠️ Search attempted but no products loaded yet');
+        return [];
+      }
+      
       const filtered = filterProducts(allProducts || [], searchValue);
       const start = (page - 1) * itemsPerPage;
       const end = start + itemsPerPage;
