@@ -45,15 +45,20 @@ const Persetujuan = () => {
       });
 
       const data = await response.json();
-      console.log('Borrow response:', data); // Debug log
-
-      // Jika data adalah array, gunakan langsung
+      console.log('Borrow response:', data); // Debug log      // Jika data adalah array, gunakan langsung
       if (Array.isArray(data)) {
-        setBorrowings(data);
-      }
-      // Jika data memiliki property borrowed_list
-      else if (data.borrowed_list) {
-        setBorrowings(data.borrowed_list);
+        const validatedBorrowings = data.map((borrow: any) => ({
+          ...borrow,
+          list_borrowing: Array.isArray(borrow.list_borrowing) ? borrow.list_borrowing : []
+        }));
+        setBorrowings(validatedBorrowings);
+      }// Jika data memiliki property borrowed_list
+      else if (data.borrowed_list && Array.isArray(data.borrowed_list)) {
+        const validatedBorrowings = data.borrowed_list.map((borrow: any) => ({
+          ...borrow,
+          list_borrowing: Array.isArray(borrow.list_borrowing) ? borrow.list_borrowing : []
+        }));
+        setBorrowings(validatedBorrowings);
       }
       // Jika tidak ada data
       else {
@@ -169,16 +174,14 @@ const Persetujuan = () => {
               <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Detail Peminjaman</TableCell>
               <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Aksi</TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {borrowings.length === 0 ? (
+          </TableHead>          <TableBody>
+            {!Array.isArray(borrowings) || borrowings.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   Tidak ada peminjaman yang menunggu persetujuan
                 </TableCell>
-              </TableRow>
-            ) : (
-              borrowings.map((borrow) => (
+              </TableRow>            ) : (
+              Array.isArray(borrowings) && borrowings.map((borrow) => (
                 <TableRow key={borrow.id}>
                   <TableCell>{borrow.id}</TableCell>
                   <TableCell>{borrow.username}</TableCell>

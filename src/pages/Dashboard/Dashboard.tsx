@@ -68,10 +68,8 @@ const PeminjamanPage = () => {
       sessionStorage.setItem(cacheKey, JSON.stringify({
         data,
         timestamp: Date.now()
-      }));
-
-      setProducts(data.product_list || []);
-      setTotalProducts(data.total_products);
+      }));      setProducts(data.product_list || []);
+      setTotalProducts(data.total_products || 0);
 
     } catch (err) {
       console.error('Error:', err);

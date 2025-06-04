@@ -28,13 +28,16 @@ const Pengembalian = () => {
         headers: {
           'Authorization': `Bearer ${token}`,
         }
-      });
-
-      const data = await response.json();
-      console.log('Borrowed assets:', data);
-
-      if (Array.isArray(data)) {
-        setAssets(data);
+      });      const data = await response.json();
+      console.log('Borrowed assets:', data);      if (Array.isArray(data)) {
+        // Validate and ensure list_borrowing is always an array
+        const validatedAssets = data.map((asset: any) => ({
+          ...asset,
+          list_borrowing: Array.isArray(asset.list_borrowing) ? asset.list_borrowing : []
+        }));
+        setAssets(validatedAssets);
+      } else {
+        setAssets([]);
       }
     } catch (err) {
       console.error('Error fetching borrowed assets:', err);
@@ -111,9 +114,8 @@ const Pengembalian = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Detail Aset</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Aksi</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {assets.map((asset) => (
+            </TableHead>            <TableBody>
+              {Array.isArray(assets) && assets.map((asset) => (
                 <TableRow key={asset.id}>
                   <TableCell>{asset.id}</TableCell>
                   <TableCell>{asset.username}</TableCell>

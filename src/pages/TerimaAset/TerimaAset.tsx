@@ -1,5 +1,6 @@
 import { Box, Button, Checkbox, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, CircularProgress } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { validateApiResponse } from '../../utils/arrayUtils';
 
 interface BorrowedProduct {
   product_id: string;
@@ -35,11 +36,12 @@ const TerimaAset = () => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Gagal mengambil data');
-      }
-
-      const data = await response.json();
+      }      const data = await response.json();
       console.log('Return requests:', data); // Debug log
-      setReturnRequests(data);
+      
+      // Use utility function to validate and structure the data
+      const validatedRequests = validateApiResponse<ReturnRequest>(data, ['list_borrowing']);
+      setReturnRequests(validatedRequests);
     } catch (err) {
       console.error('Error:', err);
       setError((err as Error).message);
@@ -144,9 +146,8 @@ const TerimaAset = () => {
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Tgl Pengembalian</TableCell>
                 <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Aksi</TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {returnRequests.map((request, idx) => (
+            </TableHead>            <TableBody>
+              {Array.isArray(returnRequests) && returnRequests.map((request, idx) => (
                 <TableRow key={request.id}>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{idx + 1}</TableCell>
                   <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>{request.username}</TableCell>                  <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
