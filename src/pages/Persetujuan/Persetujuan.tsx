@@ -82,6 +82,7 @@ const Persetujuan = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Gagal memproses permintaan');
       }      if (data.success) {
+        // Show success message
         Swal.fire({
           title: 'Sukses!',
           text: approve ? 'Peminjaman berhasil disetujui!' : 'Peminjaman ditolak',
@@ -94,11 +95,44 @@ const Persetujuan = () => {
           approve,
           borrowId,
           username,
-          action: approve ? 'approval' : 'rejection'
+          action: approve ? 'approval' : 'rejection',
+          timestamp: new Date().toISOString()
         });
         
-        window.dispatchEvent(new CustomEvent('dataRefresh'));
-        console.log('📡 dataRefresh event dispatched successfully');
+        // Check if event listeners exist
+        console.log('🎯 Checking window event system:', {
+          hasEventTarget: typeof window.dispatchEvent === 'function',
+          hasCustomEvent: typeof CustomEvent !== 'undefined'
+        });
+        
+        // Dispatch the event
+        const refreshEvent = new CustomEvent('dataRefresh');
+        const eventDispatched = window.dispatchEvent(refreshEvent);
+        
+        console.log('📡 dataRefresh event dispatch result:', {
+          eventDispatched,
+          eventType: refreshEvent.type,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Additional verification that the event was created properly
+        console.log('✅ Event verification:', {
+          eventCreated: refreshEvent instanceof CustomEvent,
+          eventType: refreshEvent.type,
+          dispatchResult: eventDispatched
+        });
+        
+        // Additional debug - try to set sessionStorage directly as backup
+        try {
+          sessionStorage.setItem('peminjamanNeedsRefresh', 'true');
+          console.log('🔧 Backup: Set sessionStorage flag directly');
+          console.log('🔍 SessionStorage verification:', {
+            flagSet: sessionStorage.getItem('peminjamanNeedsRefresh'),
+            allKeys: Object.keys(sessionStorage)
+          });
+        } catch (storageError) {
+          console.error('❌ SessionStorage backup failed:', storageError);
+        }
         
         fetchBorrowings(); // Refresh data
       } else {

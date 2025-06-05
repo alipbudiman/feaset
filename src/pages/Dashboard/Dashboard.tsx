@@ -28,10 +28,19 @@ const PeminjamanPage = () => {
   const [page, setPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
   const [totalProducts, setTotalProducts] = useState(0);  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);  const itemsPerPage = 12;  // Function untuk force refresh semua data (clear cache dan reload)
+  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);  const itemsPerPage = 12;
+  const location = useLocation();  // Function untuk force refresh semua data (clear cache dan reload)
   const forceRefreshProducts = async () => {
     try {
       console.log('🚀 Starting force refresh of products data...');
+      console.log('📊 Current state before refresh:', {
+        productsCount: products.length,
+        allProductsCount: allProducts.length,
+        currentPage: page,
+        backgroundLoadingComplete,
+        searchValue,
+        currentPath: location.pathname
+      });
       
       // Clear all related cache
       const keysToRemove = [];
@@ -51,16 +60,30 @@ const PeminjamanPage = () => {
       
       // Force reload current page data
       console.log('📄 Force reloading current page data...');
+      setLoading(true); // Show loading indicator
       await fetchPageProducts(true);
-        // Start background loading again
+      
+      // Start background loading again
       setTimeout(() => {
         console.log('🔄 Starting background loading again...');
         backgroundLoadAllProducts(0); // Start from index 0 to include first page
       }, 500);
       
       console.log('✅ Products data force refreshed successfully after stock change');
+      
+      // Additional verification
+      setTimeout(() => {
+        console.log('🔍 Post-refresh state verification:', {
+          productsCount: products.length,
+          allProductsCount: allProducts.length,
+          loading: loading,
+          backgroundLoadingComplete: backgroundLoadingComplete
+        });
+      }, 1000);
+      
     } catch (error) {
       console.error('❌ Error force refreshing products:', error);
+      setLoading(false); // Ensure loading state is cleared on error
     }
   };
 
@@ -228,7 +251,69 @@ const PeminjamanPage = () => {
       // Fetch page products untuk tampilan normal
       fetchPageProducts();
     }
-  }, [searchValue, page]);// Handle search
+  }, [searchValue, page]);  // Check for refresh flag when PeminjamanPage mounts
+  useEffect(() => {
+    console.log('🎯 PeminjamanPage mounted, checking for refresh flag...');
+    
+    // Check immediately
+    const checkRefreshFlag = () => {
+      const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
+      console.log('🔍 Checking refresh flag:', { needsRefresh, currentPath: location.pathname });
+      
+      if (needsRefresh === 'true') {
+        console.log('✅ Refresh flag detected! Triggering force refresh...');
+        sessionStorage.removeItem('peminjamanNeedsRefresh');
+        forceRefreshProducts();
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (!checkRefreshFlag()) {
+      // Also check after a short delay to catch race conditions
+      const checkTimer = setTimeout(() => {
+        console.log('⏰ Delayed check for refresh flag...');
+        checkRefreshFlag();
+      }, 100);
+
+      return () => clearTimeout(checkTimer);
+    }
+  }, []); // Run only on mount
+
+  // Check for refresh flag when user navigates to peminjaman page
+  useEffect(() => {
+    console.log('🧭 Location changed to:', location.pathname);
+    
+    if (location.pathname === '/dashboard/peminjaman') {
+      console.log('📍 Navigation to peminjaman detected, checking refresh flag...');
+      
+      // Multiple checks with different delays to ensure we catch the flag
+      const timers: NodeJS.Timeout[] = [];
+      
+      [50, 150, 300].forEach((delay, index) => {
+        const timer = setTimeout(() => {
+          const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
+          console.log(`⏱️ Check ${index + 1} (${delay}ms delay):`, { needsRefresh });
+          
+          if (needsRefresh === 'true') {
+            console.log(`✅ Refresh flag found on check ${index + 1}! Triggering refresh...`);
+            sessionStorage.removeItem('peminjamanNeedsRefresh');
+            forceRefreshProducts();
+          }
+        }, delay);
+        
+        timers.push(timer);
+      });
+
+      return () => {
+        console.log('🧹 Cleaning up navigation timers');
+        timers.forEach(timer => clearTimeout(timer));
+      };
+    }
+  }, [location.pathname]); // Run when location changes
+
+// Handle search
   useEffect(() => {
     const handleSearch = (event: CustomEvent<string>) => {
       const newSearchValue = event.detail;
@@ -255,10 +340,14 @@ const PeminjamanPage = () => {
           return [...prevAll, ...newProducts];
         });
       }
-    };    const handleDataRefresh = () => {
+    };
+
+    const handleDataRefresh = () => {
       console.log('📢 Received data refresh event in PeminjamanPage');
       forceRefreshProducts();
-    };    const handlePeminjamanDataRefresh = () => {
+    };
+
+    const handlePeminjamanDataRefresh = () => {
       console.log('🏠 Received peminjaman-specific data refresh event');
       console.log('🏠 Force refreshing PeminjamanPage products data...');
       forceRefreshProducts();
@@ -275,7 +364,23 @@ const PeminjamanPage = () => {
       window.removeEventListener('dataRefresh', handleDataRefresh as EventListener);
       window.removeEventListener('peminjamanDataRefresh', handlePeminjamanDataRefresh as EventListener);
     };
-  }, [allProducts.length, products]);// Enhanced filtering function with multiple search criteria
+  }, [allProducts.length, products]);
+
+  // Periodic check for refresh flag (safety net)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
+      if (needsRefresh === 'true' && location.pathname === '/dashboard/peminjaman') {
+        console.log('🔄 Periodic check found refresh flag, triggering refresh...');
+        sessionStorage.removeItem('peminjamanNeedsRefresh');
+        forceRefreshProducts();
+      }
+    }, 2000); // Check every 2 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [location.pathname]);// Enhanced filtering function with multiple search criteria
   const filterProducts = (products: Product[], searchTerm: string) => {
     if (!searchTerm) return products;
     
@@ -616,17 +721,34 @@ const Dashboard = () => {
     };
 
     fetchUserRole();
-  }, [navigate]);
-  // Add global data refresh listener at Dashboard level
+  }, [navigate]);  // Add global data refresh listener at Dashboard level
   useEffect(() => {
     const handleGlobalDataRefresh = () => {
       console.log('🌐 Global data refresh triggered from Dashboard level');
       console.log('🗺️ Current location:', location.pathname);
+      console.log('📊 SessionStorage before setting flag:', {
+        currentFlag: sessionStorage.getItem('peminjamanNeedsRefresh'),
+        allKeys: Object.keys(sessionStorage)
+      });
       
-      // Always dispatch the peminjaman refresh event regardless of current route
-      // This ensures PeminjamanPage data gets refreshed when user navigates back to it
-      window.dispatchEvent(new CustomEvent('peminjamanDataRefresh'));
-      console.log('📢 peminjamanDataRefresh event dispatched from Dashboard');
+      // Set a flag in sessionStorage to indicate data needs refresh
+      sessionStorage.setItem('peminjamanNeedsRefresh', 'true');
+      console.log('🏷️ Set peminjamanNeedsRefresh flag in sessionStorage');
+      
+      // Verify the flag was set
+      const verifyFlag = sessionStorage.getItem('peminjamanNeedsRefresh');
+      console.log('✅ Flag verification:', { flagValue: verifyFlag, flagSet: verifyFlag === 'true' });
+      
+      // If currently on peminjaman page, refresh immediately
+      if (location.pathname === '/dashboard/peminjaman') {
+        console.log('🔄 Currently on peminjaman page, refreshing immediately');
+        window.dispatchEvent(new CustomEvent('peminjamanDataRefresh'));
+      } else {
+        console.log('📝 Not on peminjaman page, data will refresh when navigating to it');
+        console.log('📝 Current path:', location.pathname, 'Target path: /dashboard/peminjaman');
+      }
+      
+      console.log('📢 Global dataRefresh handling completed');
     };
 
     console.log('🎯 Setting up global dataRefresh listener in Dashboard');
