@@ -23,6 +23,7 @@ const TerimaAset = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [acceptLoading, setAcceptLoading] = useState(false);
   const fetchReturnRequests = async () => {
     try {
       const response = await apiService.get('/product/borrow/approved/return/accept/list');
@@ -44,9 +45,10 @@ const TerimaAset = () => {
     } finally {
       setLoading(false);
     }
-  };
-  const handleAcceptReturn = async () => {
+  };  const handleAcceptReturn = async () => {
     try {
+      setAcceptLoading(true);
+      
       for (const id of selectedItems) {
         const response = await apiService.post('/product/borrow/approved/return/accept', {
           id: id,
@@ -57,7 +59,7 @@ const TerimaAset = () => {
           const data = await response.json();
           throw new Error(data.message || 'Gagal memproses pengembalian');
         }
-      }      Swal.fire({
+      }Swal.fire({
         title: 'Sukses!',
         text: 'Pengembalian berhasil diterima',
         icon: 'success',
@@ -74,10 +76,11 @@ const TerimaAset = () => {
       Swal.fire({
         title: 'Oops...',
         text: `${(err as Error).message}`,
-        icon: 'error',
-        confirmButtonText: 'OK',
+        icon: 'error',        confirmButtonText: 'OK',
         footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
       });
+    } finally {
+      setAcceptLoading(false);
     }
   };
 
@@ -113,12 +116,11 @@ const TerimaAset = () => {
 
   return (
     <Box sx={{ bgcolor: '#6CA2DF', minHeight: '100vh', p: 3 }}>
-      <Box sx={{ maxWidth: '1300px', mx: 'auto', mt: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <Button
+      <Box sx={{ maxWidth: '1300px', mx: 'auto', mt: 2 }}>        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>          <Button
             variant="contained"
             onClick={handleAcceptReturn}
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || acceptLoading}
+            startIcon={acceptLoading ? <CircularProgress size={16} color="inherit" /> : null}
             sx={{
               bgcolor: '#4267F6',
               color: '#fff',
@@ -127,10 +129,20 @@ const TerimaAset = () => {
               fontWeight: 'bold',
               px: 3,
               boxShadow: 'none',
-              '&:hover': { bgcolor: '#274bb5' }
+              '&:hover': { bgcolor: '#274bb5' },
+              '&:disabled': {
+                bgcolor: '#cccccc',
+                color: '#888888'
+              },
+              minWidth: '140px',
+              transition: 'all 0.3s ease',
+              transform: acceptLoading ? 'scale(0.98)' : 'scale(1)',
+              '&:active': {
+                transform: 'scale(0.95)'
+              }
             }}
           >
-            Terima Aset
+            {acceptLoading ? 'Memproses...' : 'Terima Aset'}
           </Button>
         </Box>
 

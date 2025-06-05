@@ -20,6 +20,7 @@ const Pengembalian = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<BorrowedAsset | null>(null);
+  const [returnLoading, setReturnLoading] = useState(false);
   const fetchBorrowedAssets = async () => {
     try {
       const response = await apiService.get('/product/borrow/approved/list');
@@ -41,16 +42,17 @@ const Pengembalian = () => {
     } finally {
       setLoading(false);
     }
-  };
-  const handleReturnAsset = async () => {
+  };  const handleReturnAsset = async () => {
     try {
       if (!selectedAsset) return;
 
+      setReturnLoading(true);
+      
       const response = await apiService.post('/product/borrow/approved/return', {
         id: selectedAsset.id
       });
 
-      const data = await response.json();      if (data.success) {
+      const data = await response.json();if (data.success) {
         Swal.fire({
           title: "Sukses!",
           text: "Pengembalian berhasil diajukan!",
@@ -72,9 +74,9 @@ const Pengembalian = () => {
         title: "Oops...!",
         text: `${(err as Error).message}`,
         confirmButtonText: "OK",
-        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
-      });
+        footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'      });
     } finally {
+      setReturnLoading(false);
       setOpenDialog(false);
       setSelectedAsset(null);
     }
@@ -161,18 +163,39 @@ const Pengembalian = () => {
               )}
             </TableBody>
           </Table>
-        </TableContainer>
-
-        <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        </TableContainer>        <Dialog open={openDialog} onClose={() => !returnLoading && setOpenDialog(false)}>
           <DialogContent>
             <DialogContentText>
               Apakah Anda yakin ingin mengembalikan aset ini?
             </DialogContentText>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Batal</Button>
-            <Button onClick={handleReturnAsset} variant="contained">
-              Ya, Kembalikan
+            <Button 
+              onClick={() => setOpenDialog(false)}
+              disabled={returnLoading}
+            >
+              Batal
+            </Button>            <Button 
+              onClick={handleReturnAsset} 
+              variant="contained"
+              disabled={returnLoading}
+              startIcon={returnLoading ? <CircularProgress size={16} color="inherit" /> : null}
+              sx={{
+                bgcolor: '#4E71FF',
+                '&:hover': { bgcolor: '#3c5ae0' },
+                '&:disabled': {
+                  bgcolor: '#cccccc',
+                  color: '#888888'
+                },
+                minWidth: '140px',
+                transition: 'all 0.3s ease',
+                transform: returnLoading ? 'scale(0.98)' : 'scale(1)',
+                '&:active': {
+                  transform: 'scale(0.95)'
+                }
+              }}
+            >
+              {returnLoading ? 'Memproses...' : 'Ya, Kembalikan'}
             </Button>
           </DialogActions>
         </Dialog>

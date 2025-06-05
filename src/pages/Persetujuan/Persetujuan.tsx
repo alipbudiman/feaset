@@ -33,6 +33,7 @@ const Persetujuan = () => {
   const [borrowings, setBorrowings] = useState<BorrowingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
   const fetchBorrowings = async () => {
     try {
       setLoading(true);
@@ -68,8 +69,11 @@ const Persetujuan = () => {
     }
   };
 
-    const handleApprove = async (borrowId: string, username: string, approve: boolean = true) => {
+  const handleApprove = async (borrowId: string, username: string, approve: boolean = true) => {
     try {
+      // Add to processing items
+      setProcessingItems(prev => new Set(prev).add(borrowId));
+      
       const response = await apiService.post('/product/borrow/approved', {
         username: username,
         id: borrowId,
@@ -133,8 +137,7 @@ const Persetujuan = () => {
         } catch (storageError) {
           console.error('❌ SessionStorage backup failed:', storageError);
         }
-        
-        fetchBorrowings(); // Refresh data
+          fetchBorrowings(); // Refresh data
       } else {
         throw new Error(data.message);
       }
@@ -147,6 +150,13 @@ const Persetujuan = () => {
         icon: 'error',
         confirmButtonText: 'OK',
         footer: '<a href="https://wa.me/6282113791904">Laporkan error ke pengembang!</a>'
+      });
+    } finally {
+      // Remove from processing items
+      setProcessingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(borrowId);
+        return newSet;
       });
     }
   };
@@ -243,32 +253,56 @@ const Persetujuan = () => {
                         />
                       ))}
                     </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
+                  </TableCell>                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>                      <Button
                         variant="contained"
                         onClick={() => handleApprove(borrow.id, borrow.username, true)}
+                        disabled={processingItems.has(borrow.id)}
+                        startIcon={processingItems.has(borrow.id) ? <CircularProgress size={16} color="inherit" /> : null}
                         sx={{
                           bgcolor: '#4E71FF',
-                          '&:hover': { bgcolor: '#3c5ae0' }
+                          '&:hover': { bgcolor: '#3c5ae0' },
+                          '&:disabled': {
+                            bgcolor: '#cccccc',
+                            color: '#888888'
+                          },
+                          minWidth: '100px',
+                          position: 'relative',
+                          transition: 'all 0.3s ease',
+                          transform: processingItems.has(borrow.id) ? 'scale(0.98)' : 'scale(1)',
+                          '&:active': {
+                            transform: 'scale(0.95)'
+                          }
                         }}
                       >
-                        Setujui
+                        {processingItems.has(borrow.id) ? 'Memproses...' : 'Setujui'}
                       </Button>
                       <Button
                         variant="outlined"
                         onClick={() => handleApprove(borrow.id, borrow.username, false)}
+                        disabled={processingItems.has(borrow.id)}
+                        startIcon={processingItems.has(borrow.id) ? <CircularProgress size={16} color="inherit" /> : null}
                         sx={{
                           borderColor: '#ff4444',
                           color: '#ff4444',
                           '&:hover': {
                             borderColor: '#cc0000',
                             bgcolor: 'rgba(255,68,68,0.04)'
+                          },
+                          '&:disabled': {
+                            borderColor: '#cccccc',
+                            color: '#888888'
+                          },
+                          minWidth: '100px',
+                          position: 'relative',
+                          transition: 'all 0.3s ease',
+                          transform: processingItems.has(borrow.id) ? 'scale(0.98)' : 'scale(1)',
+                          '&:active': {
+                            transform: 'scale(0.95)'
                           }
                         }}
                       >
-                        Tolak
+                        {processingItems.has(borrow.id) ? 'Memproses...' : 'Tolak'}
                       </Button>
                     </Box>
                   </TableCell>
