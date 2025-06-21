@@ -7,7 +7,10 @@ import {
     Typography,
     IconButton,
     FormControlLabel,
-    Checkbox
+    Checkbox,
+    RadioGroup,
+    Radio,
+    FormControl
   } from '@mui/material';
   import CloseIcon from '@mui/icons-material/Close';
   import { useState } from 'react';
@@ -29,13 +32,14 @@ import {
       delete_url: string;
       size: number;
     };
-  }
-    const AddAssetModal = ({ open, onClose, onSuccess }: AddAssetModalProps) => {
+  }    const AddAssetModal = ({ open, onClose, onSuccess }: AddAssetModalProps) => {
     const [formData, setFormData] = useState({
       name: '',
       id_product: '',
       stock: '',
       image: null as File | null,
+      imageUrl: '', // New field for direct URL input
+      imageType: 'upload' as 'upload' | 'url', // New field to track image input type
       product_category: '',
       visible_to_user: true,
       product_location: ''
@@ -48,6 +52,24 @@ import {
         ...prev,
         [name]: type === 'checkbox' ? checked : value
       }));
+    };    const handleImageTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const imageType = e.target.value as 'upload' | 'url';
+      setFormData(prev => ({
+        ...prev,
+        imageType,
+        // Clear the other image field when switching types
+        image: imageType === 'upload' ? prev.image : null,
+        imageUrl: imageType === 'url' ? prev.imageUrl : ''
+      }));
+    };
+
+    // Helper function to check if image is provided based on selected type
+    const isImageProvided = () => {
+      if (formData.imageType === 'upload') {
+        return !!formData.image;
+      } else {
+        return !!formData.imageUrl.trim();
+      }
     };
 
     const handleCategoryKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -91,17 +113,22 @@ import {
       try {
         setLoading(true);
         setError(null);
-        setFieldErrors({});
-  
-        // Upload image first if exists
+        setFieldErrors({});        // Handle image input based on selected type
         let imageUrl = '';
-        if (formData.image) {
+        if (formData.imageType === 'upload' && formData.image) {
           try {
             imageUrl = await uploadImage(formData.image);
           } catch (error) {
             throw new Error(`Gagal upload gambar: ${(error as Error).message}`);
+          }        } else if (formData.imageType === 'url' && formData.imageUrl.trim()) {
+          // Validate URL format
+          try {
+            new URL(formData.imageUrl.trim());
+            imageUrl = formData.imageUrl.trim();
+          } catch {
+            throw new Error('Format URL gambar tidak valid. Pastikan URL dimulai dengan http:// atau https://');
           }
-        }        // Ensure category has # prefix before submitting
+        }// Ensure category has # prefix before submitting
         const categoryValue = formData.product_category.trim();
         const formattedCategory = categoryValue && !categoryValue.startsWith('#') ? '#' + categoryValue : categoryValue;
 
@@ -146,6 +173,8 @@ import {
           id_product: '',
           stock: '',
           image: null,
+          imageUrl: '',
+          imageType: 'upload',
           product_category: '',
           visible_to_user: true,
           product_location: ''
@@ -400,61 +429,118 @@ import {
                 }
                 sx={{ ml: 0 }}
               />
-            </Box>
-  
-            {/* Gambar Produk */}
+            </Box>            {/* Gambar Produk */}
             <Box>
-              <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: '#666' }}>
+              <Typography variant="caption" sx={{ mb: 1, display: 'block', color: '#666' }}>
                 Gambar Produk
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  component="label"
+              
+              {/* Image Type Selection */}
+              <FormControl component="fieldset" sx={{ mb: 1.5 }}>
+                <RadioGroup
+                  row
+                  name="imageType"
+                  value={formData.imageType}
+                  onChange={handleImageTypeChange}
+                  sx={{ gap: 2 }}
+                >
+                  <FormControlLabel
+                    value="upload"
+                    control={<Radio size="small" />}
+                    label={
+                      <Typography variant="caption" sx={{ fontSize: '12px', color: '#666' }}>
+                        Upload File
+                      </Typography>
+                    }
+                  />
+                  <FormControlLabel
+                    value="url"
+                    control={<Radio size="small" />}
+                    label={
+                      <Typography variant="caption" sx={{ fontSize: '12px', color: '#666' }}>
+                        Gunakan URL
+                      </Typography>
+                    }
+                  />
+                </RadioGroup>
+              </FormControl>
+
+              {/* Upload File Option */}
+              {formData.imageType === 'upload' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    size="small"
+                    sx={{
+                      minWidth: 'unset',
+                      height: 24,
+                      fontSize: '12px',
+                      bgcolor: '#E0E0E0',
+                      color: '#000000',
+                      textTransform: 'none',
+                      boxShadow: 'none',
+                      px: 1,
+                      '&:hover': {
+                        bgcolor: '#D0D0D0',
+                        boxShadow: 'none'
+                      }
+                    }}
+                  >
+                    Pilih File
+                    <input
+                      type="file"
+                      hidden
+                      onChange={handleFileSelect}
+                      accept="image/*"
+                    />
+                  </Button>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: '#666666',
+                      fontSize: '12px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '180px'
+                    }}
+                  >
+                    {formData.image ? formData.image.name : 'Nama file gambar'}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* URL Input Option */}
+              {formData.imageType === 'url' && (
+                <TextField
+                  fullWidth
                   size="small"
+                  name="imageUrl"
+                  value={formData.imageUrl}
+                  onChange={handleInputChange}
+                  variant="outlined"
+                  placeholder="https://example.com/image.jpg"
+                  helperText="Masukkan URL lengkap gambar (dimulai dengan http:// atau https://)"
                   sx={{
-                    minWidth: 'unset',
-                    height: 24,
-                    fontSize: '12px',
-                    bgcolor: '#E0E0E0',
-                    color: '#000000',
-                    textTransform: 'none',
-                    boxShadow: 'none',
-                    px: 1,
-                    '&:hover': {
-                      bgcolor: '#D0D0D0',
-                      boxShadow: 'none'
+                    '& .MuiOutlinedInput-root': {
+                      height: 32,
+                      fontSize: '13px',
+                      bgcolor: '#F5F5F5'
+                    },
+                    '& .MuiFormHelperText-root': {
+                      fontSize: '11px',
+                      color: '#999',
+                      marginTop: '4px'
                     }
                   }}
-                >
-                  Pilih File
-                  <input
-                    type="file"
-                    hidden
-                    onChange={handleFileSelect}
-                    accept="image/*"
-                  />
-                </Button>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: '#666666',
-                    fontSize: '12px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '180px'
-                  }}
-                >
-                  {formData.image ? formData.image.name : 'Nama file gambar'}
-                </Typography>
-              </Box>
-            </Box>            {/* Tombol Tambah dan Batal */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1, mt: 0.5 }}>
-              <Button
+                />
+              )}
+            </Box>{/* Tombol Tambah dan Batal */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1, mt: 0.5 }}>              <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={loading || !formData.name || !formData.id_product || !formData.stock || !formData.product_category || !formData.product_location}
+                disabled={loading || !formData.name || !formData.id_product || !formData.stock || !formData.product_category || !formData.product_location || !isImageProvided()}
                 sx={{
                   minWidth: 'unset',
                   height: 28,
