@@ -11,7 +11,6 @@ import Pengembalian from '../Pengembalian/Pengembalian';
 import BuatAkun from '../BuatAkun/BuatAkun';
 import TerimaAset from '../TerimaAset/TerimaAset';
 import Persetujuan from '../Persetujuan/Persetujuan';
-import UserManagement from '../UserManagement/UserManagement';
 import { apiService } from '../../utils/apiService';
 
 interface Product {
@@ -842,13 +841,11 @@ const Dashboard = () => {
             maxWidth: '1400px'
           }
         }}>          <Routes>
-            <Route index element={<Navigate to="peminjaman" replace />} />
-            <Route path="peminjaman" element={<PeminjamanPage />} />
+            <Route index element={<Navigate to="peminjaman" replace />} />            <Route path="peminjaman" element={<PeminjamanPage />} />
             <Route path="pengembalian" element={<Pengembalian />} />
             <Route path="buat-akun" element={<BuatAkun />} />
             <Route path="terima-aset" element={<TerimaAset />} />
             <Route path="persetujuan" element={<Persetujuan />} />
-            <Route path="user-management" element={<UserManagement />} />
           </Routes>
         </Box>
       </Box>
