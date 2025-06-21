@@ -1,18 +1,27 @@
 import { Box, Typography, Button } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useListPinjam } from '../context/ListPinjamContext';
+import { useAuth } from '../contexts/useAuth';
+import EditProductModal from './EditProductModal';
+import DeleteProductDialog from './DeleteProductDialog';
 
 interface AssetCardProps {
   id: string;
   nama: string;
   stok: number;
   gambar: string; // This will now contain display_url
+  product_category?: string;
+  product_location?: string;
+  onProductUpdated?: () => void; // Callback when product is updated
 }
 
-const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
+const AssetCard = ({ id, nama, stok, gambar, product_category, product_location, onProductUpdated }: AssetCardProps) => {
   const [jumlah, setJumlah] = useState(0);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { addToListPinjam } = useListPinjam();
-
+  const auth = useAuth();
   const handleAddToList = () => {
     if (jumlah > 0 && jumlah <= stok) {
       addToListPinjam({
@@ -25,6 +34,33 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
       setJumlah(0);
     }
   };
+
+  // Handler functions for admin actions
+  const handleEditProduct = () => {
+    setShowEditModal(true);
+  };
+
+  const handleDeleteProduct = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleProductUpdated = () => {
+    setShowEditModal(false);
+    if (onProductUpdated) {
+      onProductUpdated();
+    }
+  };
+
+  const handleProductDeleted = () => {
+    setShowDeleteDialog(false);
+    if (onProductUpdated) {
+      onProductUpdated();
+    }
+  };
+
+  // Check if user has admin privileges
+  const userRole = auth?.userRole;
+  const canManageProducts = userRole === 'master' || userRole === 'admin';
 
   // Fungsi untuk mengubah jumlah
   const decreaseJumlah = () => setJumlah(prev => Math.max(0, prev - 1));
@@ -65,15 +101,14 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
     console.log('Processed image URL:', getImageUrl(gambar));
   }, [gambar]);
 
-  return (
-    <Box sx={{ 
+  return (    <Box sx={{ 
       bgcolor: '#4E71FF',
       borderRadius: '12px',
       p: 1.5,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      height: '280px', // Mengurangi tinggi card
+      height: '380px', // Increased height to accommodate admin buttons
       width: '220px', // Set fixed width
       boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.08)',
       transition: 'all 0.3s ease',
@@ -84,31 +119,29 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
     }}>
       <Box sx={{ 
         width: '100%',
-        height: 130,
+        height: 110, // Slightly reduce image height
         borderRadius: '8px',
         overflow: 'hidden',
-        mb: 1.5,
+        mb: 1,
         bgcolor: '#fff',
         position: 'relative'
-      }}>
-        <img
+      }}>        <Box
+          component="img"
           src={getImageUrl(gambar)}
           alt={nama}
-          onError={(e) => {
+          onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
             console.error('Image load failed:', gambar);
             e.currentTarget.src = 'https://via.placeholder.com/150';
           }}
           loading="lazy"
-          style={{ 
+          sx={{ 
             width: '100%', 
             height: '100%', 
             objectFit: 'cover',
             backgroundColor: '#f5f5f5'
           }} 
         />
-      </Box>
-
-      <Typography 
+      </Box>      <Typography 
         fontFamily="'Poppins', sans-serif"
         fontWeight="600"
         fontSize={14} // Mengubah ukuran font
@@ -125,11 +158,70 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
         {nama}
       </Typography>
 
+      {/* Product ID */}
+      <Typography 
+        fontFamily="'Poppins', sans-serif"
+        fontSize={10}
+        color="#e3f2fd"
+        align="center"
+        sx={{ 
+          mb: 0.5,
+          maxWidth: '90%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+      >
+        ID: {id}
+      </Typography>
+
+      {/* Product Category Tag */}
+      {product_category && (
+        <Typography 
+          fontFamily="'Poppins', sans-serif"
+          fontSize={10}
+          color="#fff"
+          align="center"
+          sx={{ 
+            mb: 0.5,
+            bgcolor: 'rgba(255,255,255,0.2)',
+            px: 1,
+            py: 0.2,
+            borderRadius: '8px',
+            maxWidth: '90%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          #{product_category}
+        </Typography>
+      )}
+
+      {/* Product Location */}
+      {product_location && (
+        <Typography 
+          fontFamily="'Poppins', sans-serif"
+          fontSize={10}
+          color="#e3f2fd"
+          align="center"
+          sx={{ 
+            mb: 0.5,
+            maxWidth: '90%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          📍 {product_location}
+        </Typography>
+      )}
+
       <Typography 
         fontFamily="'Poppins', sans-serif"
         fontSize={12} // Mengubah ukuran font
         color="#e3f2fd"
-        mb={1.5}
+        mb={1}
       >
         Stok: {stok}
       </Typography>
@@ -183,9 +275,7 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
         >
           +
         </Button>
-      </Box>
-
-      <Button
+      </Box>      <Button
         fullWidth
         variant="contained"
         disabled={jumlah === 0}
@@ -208,6 +298,88 @@ const AssetCard = ({ id, nama, stok, gambar }: AssetCardProps) => {
       >
         Tambahkan ke List
       </Button>
+
+      {/* Admin Action Buttons */}
+      {canManageProducts && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          mt: 1, 
+          width: '100%' 
+        }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleEditProduct}
+            startIcon={<EditIcon />}
+            sx={{
+              flex: 1,
+              height: 28,
+              fontSize: 11,
+              color: 'white',
+              borderColor: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.1)',
+                borderColor: 'white'
+              }
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleDeleteProduct}
+            startIcon={<DeleteIcon />}
+            sx={{
+              flex: 1,
+              height: 28,
+              fontSize: 11,
+              color: '#ff6b6b',
+              borderColor: '#ff6b6b',
+              '&:hover': {
+                bgcolor: 'rgba(255,107,107,0.1)',
+                borderColor: '#ff6b6b'
+              }
+            }}
+          >
+            Hapus
+          </Button>
+        </Box>
+      )}
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        product={{
+          id_product: id,
+          name: nama,
+          stock: stok,
+          image: gambar,
+          product_category: product_category || '',
+          product_location: product_location || '',
+          visible_to_user: true,
+        }}
+        onProductUpdated={handleProductUpdated}
+        currentUserRole={userRole}
+      />
+
+      {/* Delete Product Dialog */}
+      <DeleteProductDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        product={{
+          id_product: id,
+          name: nama,
+          stock: stok,
+          image: gambar,
+          product_category: product_category || '',
+          product_location: product_location || '',
+        }}
+        onProductDeleted={handleProductDeleted}
+        currentUserRole={userRole}
+      />
     </Box>
   );
 };

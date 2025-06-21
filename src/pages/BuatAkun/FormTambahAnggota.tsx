@@ -1,10 +1,29 @@
 import React from "react";
+import { useAuth } from "../../contexts/useAuth";
 
-const roles = [
+const getAllRoles = () => [
   { value: "", label: "-- Pilih role anda --" },
   { value: "admin", label: "Admin" },
   { value: "user", label: "User" },
+  { value: "master", label: "Master" },
 ];
+
+const getFilteredRoles = (currentUserRole: string | null) => {
+  const allRoles = getAllRoles();
+  
+  // If current user is master, they can assign any role
+  if (currentUserRole === 'master') {
+    return allRoles;
+  }
+  
+  // If current user is admin, they cannot assign master role
+  if (currentUserRole === 'admin') {
+    return allRoles.filter(role => role.value !== 'master');
+  }
+  
+  // For other roles or if role is not determined, only show user role
+  return allRoles.filter(role => role.value === '' || role.value === 'user');
+};
 
 function FormLabelInput({ label, name, type = "text" }: { label: string; name: string; type?: string }) {
   return (
@@ -45,6 +64,13 @@ interface FormTambahAnggotaProps {
 }
 
 export default function FormTambahAnggota({ onClose, onSubmit }: FormTambahAnggotaProps) {
+  const { userRole } = useAuth();
+  const availableRoles = getFilteredRoles(userRole);
+
+  // Debug logging
+  console.log('FormTambahAnggota - Current user role:', userRole);
+  console.log('FormTambahAnggota - Available roles:', availableRoles);
+
   return (
     <div
       style={{
@@ -134,8 +160,7 @@ export default function FormTambahAnggota({ onClose, onSubmit }: FormTambahAnggo
               }}
               defaultValue=""
               required
-            >
-              {roles.map((role) => (
+            >              {availableRoles.map((role) => (
                 <option key={role.value} value={role.value}>
                   {role.label}
                 </option>

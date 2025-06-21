@@ -11,6 +11,7 @@ import Pengembalian from '../Pengembalian/Pengembalian';
 import BuatAkun from '../BuatAkun/BuatAkun';
 import TerimaAset from '../TerimaAset/TerimaAset';
 import Persetujuan from '../Persetujuan/Persetujuan';
+import UserManagement from '../UserManagement/UserManagement';
 import { apiService } from '../../utils/apiService';
 
 interface Product {
@@ -19,6 +20,9 @@ interface Product {
   stock: number;
   image: string;
   added_by: string;
+  product_category: string;
+  visible_to_user: boolean;
+  product_location: string;
 }
 
 // Komponen untuk halaman Peminjaman
@@ -380,7 +384,7 @@ const PeminjamanPage = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [location.pathname]);// Enhanced filtering function with multiple search criteria
+  }, [location.pathname]);  // Enhanced filtering function with multiple search criteria including tags
   const filterProducts = (products: Product[], searchTerm: string) => {
     if (!searchTerm) return products;
     
@@ -401,16 +405,35 @@ const PeminjamanPage = () => {
       const stockStatusMatch = 
         (lowerSearchTerm.includes('habis') || lowerSearchTerm.includes('kosong')) && product.stock === 0 ||
         (lowerSearchTerm.includes('tersedia') || lowerSearchTerm.includes('ada')) && product.stock > 0;
+        // Search by product category (enhanced with # handling)
+      const categoryMatch = product.product_category && (
+        // Direct category match
+        product.product_category.toLowerCase().includes(lowerSearchTerm) ||
+        // Search term with # matches category
+        (lowerSearchTerm.startsWith('#') && product.product_category.toLowerCase().includes(lowerSearchTerm.substring(1))) ||
+        // Search term without # matches category that starts with #
+        (!lowerSearchTerm.startsWith('#') && product.product_category.toLowerCase().includes('#' + lowerSearchTerm)) ||
+        // Flexible category matching
+        product.product_category.toLowerCase().replace('#', '').includes(lowerSearchTerm.replace('#', ''))
+      );
       
-      return nameMatch || idMatch || stockMatch || stockStatusMatch;
+      // Search by product location
+      const locationMatch = product.product_location && 
+        product.product_location.toLowerCase().includes(lowerSearchTerm);
+      
+      // Search by added_by user
+      const addedByMatch = product.added_by && 
+        product.added_by.toLowerCase().includes(lowerSearchTerm);
+      
+      return nameMatch || idMatch || stockMatch || stockStatusMatch || categoryMatch || locationMatch || addedByMatch;
     });
     
     console.log(`🔍 Search "${searchTerm}": ${filtered.length} results from ${products.length} total products`);
     if (filtered.length > 0) {
-      console.log(`🔍 Found products:`, filtered.map(p => p.name));
+      console.log(`🔍 Found products:`, filtered.map(p => `${p.name} (#${p.product_category}) - ${p.product_location}`));
     }
     return filtered;
-  };  // Filter dan tampilkan produk dengan enhanced search
+  };// Filter dan tampilkan produk dengan enhanced search
   const displayedProducts = useMemo(() => {
     if (searchValue) {
       // Use combined dataset: allProducts if available, otherwise fallback to current products
@@ -572,8 +595,7 @@ const PeminjamanPage = () => {
             }}
           >
             Coba gunakan kata kunci lain atau gunakan tips pencarian:
-          </Typography>
-          <Box sx={{ 
+          </Typography>          <Box sx={{ 
             textAlign: 'left', 
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: '0.9rem',
@@ -582,6 +604,8 @@ const PeminjamanPage = () => {
             <Typography>• Cari berdasarkan nama produk (contoh: "laptop")</Typography>
             <Typography>• Cari berdasarkan ID produk (contoh: "LT001")</Typography>
             <Typography>• Cari berdasarkan stok (contoh: "10")</Typography>
+            <Typography>• Cari berdasarkan kategori (contoh: "#computer" atau "electronics")</Typography>
+            <Typography>• Cari berdasarkan lokasi (contoh: "labor 404")</Typography>
             <Typography>• Cari status stok (contoh: "habis", "tersedia")</Typography>
           </Box>
         </Box>
@@ -609,14 +633,16 @@ const PeminjamanPage = () => {
             '& > *': {
               justifySelf: 'center' // Memastikan card berada di tengah kolom
             }
-          }}>
-            {displayedProducts.map((product) => (
+          }}>            {displayedProducts.map((product) => (
               <AssetCard
                 key={product.id_product}
                 id={product.id_product}
                 nama={product.name}
                 stok={product.stock}
                 gambar={product.image}
+                product_category={product.product_category}
+                product_location={product.product_location}
+                onProductUpdated={forceRefreshProducts}
               />
             ))}
           </Box>
@@ -815,14 +841,14 @@ const Dashboard = () => {
             width: '100%',
             maxWidth: '1400px'
           }
-        }}>
-          <Routes>
+        }}>          <Routes>
             <Route index element={<Navigate to="peminjaman" replace />} />
             <Route path="peminjaman" element={<PeminjamanPage />} />
             <Route path="pengembalian" element={<Pengembalian />} />
             <Route path="buat-akun" element={<BuatAkun />} />
             <Route path="terima-aset" element={<TerimaAset />} />
             <Route path="persetujuan" element={<Persetujuan />} />
+            <Route path="user-management" element={<UserManagement />} />
           </Routes>
         </Box>
       </Box>

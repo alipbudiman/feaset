@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Button, Paper, Dialog, DialogActions, DialogContent, DialogContentText, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { apiService } from '../../utils/apiService';
@@ -114,9 +115,9 @@ const Pengembalian = () => {
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Peminjam</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Tanggal Peminjaman</TableCell>
                 <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Detail Aset</TableCell>
-                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Aksi</TableCell>
-              </TableRow>
-            </TableHead>            <TableBody>
+                <TableCell sx={{ color: '#fff', fontWeight: 'bold' }}>Aksi</TableCell>              </TableRow>
+            </TableHead>
+            <TableBody>
               {!Array.isArray(assets) || assets.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center">

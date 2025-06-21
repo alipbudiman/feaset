@@ -3,36 +3,19 @@ import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login/Login';
 import ResetPassword from './pages/Login/ResetPassword';
 import ResetSuccess from './pages/Login/ResetSuccess';
-import { useEffect, useState, createContext, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import Dashboard from './pages/Dashboard/Dashboard';
 import { ListPinjamProvider } from './context/ListPinjamContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/useAuth';
 import { apiService } from './utils/apiService';
 
-// Buat context untuk autentikasi
-export const AuthContext = createContext<{
-  isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
-  logout: () => void;
-}>({
-  isAuthenticated: false,
-  setIsAuthenticated: () => {},
-  logout: () => {}
-});
-
-// Hook untuk menggunakan auth context
-export const useAuth = () => useContext(AuthContext);
-
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+const AppContent = () => {
+  const { isAuthenticated } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [healthStatus, setHealthStatus] = useState<string>('Checking API status...');
-  
-  const logout = () => {
-    // Hapus semua data sesi
-    sessionStorage.clear();
-    // Update state autentikasi
-    setIsAuthenticated(false);
-  };  useEffect(() => {
+
+  useEffect(() => {
     const initializeApp = async () => {
       try {
         // Perform health check in the background
@@ -55,12 +38,6 @@ const App = () => {
         // Don't block the app if health check fails
       }
 
-      // Check authentication status
-      const token = sessionStorage.getItem('token');
-      if (token) {
-        setIsAuthenticated(true);
-      }
-      
       // Small delay to show the health status
       setTimeout(() => {
         setIsLoading(false);
@@ -68,7 +45,9 @@ const App = () => {
     };
 
     initializeApp();
-  }, []);  if (isLoading) {
+  }, []);
+
+  if (isLoading) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -105,47 +84,49 @@ const App = () => {
       </div>
     );
   }
-
   return (
-    <AuthContext.Provider value={{ isAuthenticated, setIsAuthenticated, logout }}>
-      <ListPinjamProvider>
-        <BrowserRouter>
-          <Toaster position="top-right" />
-            <Routes>
-              {/* Root route - redirect berdasarkan auth status */}
-              <Route 
-                path="/" 
-                element={
-                  <Navigate to={isAuthenticated ? "/dashboard/peminjaman" : "/login"} replace />
-                } 
-              />
+    <ListPinjamProvider>
+      <Toaster position="top-right" />
+        <Routes>
+            {/* Root route - redirect berdasarkan auth status */}
+            <Route 
+              path="/" 
+              element={
+                <Navigate to={isAuthenticated ? "/dashboard/peminjaman" : "/login"} replace />
+              } 
+            />            {/* Login route - redirect ke dashboard/peminjaman jika sudah auth */}
+            <Route 
+              path="/login" 
+              element={
+                isAuthenticated ? 
+                  <Navigate to="/dashboard/peminjaman" replace /> : 
+                  <Login />
+              } 
+            />
 
-              {/* Login route - redirect ke dashboard/peminjaman jika sudah auth */}
-              <Route 
-                path="/login" 
-                element={
-                  isAuthenticated ? 
-                    <Navigate to="/dashboard/peminjaman" replace /> : 
-                    <Login setIsAuthenticated={setIsAuthenticated} />
-                } 
-              />
+            {/* Dashboard routes - protected by auth */}
+            <Route
+              path="/dashboard/*"
+              element={
+                isAuthenticated ? 
+                  <Dashboard /> : 
+                  <Navigate to="/login" replace />
+              }
+            />            {/* Public routes */}
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/reset-success" element={<ResetSuccess />} />
+          </Routes>
+      </ListPinjamProvider>
+  );
+};
 
-              {/* Dashboard routes - protected by auth */}              <Route
-                path="/dashboard/*"
-                element={
-                  isAuthenticated ? 
-                    <Dashboard /> : 
-                    <Navigate to="/login" replace />
-                }
-              />
-
-              {/* Public routes */}
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/reset-success" element={<ResetSuccess />} />
-            </Routes>
-          </BrowserRouter>
-        </ListPinjamProvider>
-    </AuthContext.Provider>
+const App = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
 

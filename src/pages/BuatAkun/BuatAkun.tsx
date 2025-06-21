@@ -3,6 +3,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import { apiService } from '../../utils/apiService';
+import { useAuth } from '../../contexts/useAuth';
 
 interface Member {
   no: number;
@@ -21,7 +22,42 @@ interface CreateUserResponse {
 }
 
 const BuatAkun = () => {
+  const { userRole } = useAuth();
   const [openDialog, setOpenDialog] = useState(false);
+  
+  // Role filtering function
+  const getAvailableRoles = () => {
+    const baseRoles = [
+      { value: '', label: '-- Pilih role anda --' },
+      { value: 'user', label: 'User' },
+      { value: 'admin', label: 'Admin' }
+    ];
+    
+    // If current user is master, they can assign any role including master
+    if (userRole === 'master') {
+      return [
+        ...baseRoles,
+        { value: 'master', label: 'Master' }
+      ];
+    }
+    
+    // If current user is admin, they can assign user and admin roles
+    if (userRole === 'admin') {
+      return baseRoles;
+    }
+    
+    // For other roles, only allow user role
+    return [
+      { value: '', label: '-- Pilih role anda --' },
+      { value: 'user', label: 'User' }
+    ];
+  };
+  
+  const availableRoles = getAvailableRoles();
+  
+  // Debug logging
+  console.log('BuatAkun - Current user role:', userRole);
+  console.log('BuatAkun - Available roles:', availableRoles);
   const [formData, setFormData] = useState({
     nama: '',
     username: '',
@@ -266,8 +302,7 @@ const BuatAkun = () => {
                   onChange={handleChange}
                   variant="outlined"
                   sx={{ mb: 2, bgcolor: '#e0e0e0', borderRadius: '8px' }}
-                />
-                <TextField
+                />                <TextField
                   fullWidth
                   select
                   label="Role"
@@ -277,9 +312,11 @@ const BuatAkun = () => {
                   variant="outlined"
                   sx={{ mb: 2, bgcolor: '#e0e0e0', borderRadius: '8px' }}
                 >
-                  <MenuItem value="">-- Pilih role anda --</MenuItem>
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="user">User</MenuItem>
+                  {availableRoles.map((role) => (
+                    <MenuItem key={role.value} value={role.value}>
+                      {role.label}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Box>
             </Box>

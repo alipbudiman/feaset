@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,13 +10,11 @@ import {
 } from '@mui/material';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../../utils/apiService';
+import { useAuth } from '../../contexts/useAuth';
 
-interface LoginProps {
-  setIsAuthenticated: (value: boolean) => void;
-}
-
-const Login = ({ setIsAuthenticated }: LoginProps) => {
+const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -57,8 +56,7 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
         if (data.refresh_token) {
           sessionStorage.setItem('refresh_token', data.refresh_token);
         }
-        
-        // Get user data using apiService
+          // Get user data using apiService
         try {
           const userResponse = await apiService.get('/user/get_account');
 
@@ -67,16 +65,17 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
           }
 
           const userData = await userResponse.json();
-          sessionStorage.setItem('userRole', userData.role || 'user');
+          const userRole = userData.data?.role || userData.role || 'user';
           
-          setIsAuthenticated(true);
+          // Use AuthContext login method
+          login(data.access_token, userRole);
+          
           navigate('/dashboard');
           toast.success('Login berhasil!');
         } catch (userError) {
           console.error('Error fetching user data:', userError);
           // Tetap set role default dan lanjut ke dashboard
-          sessionStorage.setItem('userRole', 'user');
-          setIsAuthenticated(true);
+          login(data.access_token, 'user');
           navigate('/dashboard');
         }
       } else {

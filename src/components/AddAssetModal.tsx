@@ -5,7 +5,9 @@ import {
     Button,
     Box,
     Typography,
-    IconButton
+    IconButton,
+    FormControlLabel,
+    Checkbox
   } from '@mui/material';
   import CloseIcon from '@mui/icons-material/Close';
   import { useState } from 'react';
@@ -28,24 +30,36 @@ import {
       size: number;
     };
   }
-  
-  const AddAssetModal = ({ open, onClose, onSuccess }: AddAssetModalProps) => {
+    const AddAssetModal = ({ open, onClose, onSuccess }: AddAssetModalProps) => {
     const [formData, setFormData] = useState({
       name: '',
       id_product: '',
       stock: '',
-      image: null as File | null
+      image: null as File | null,
+      product_category: '',
+      visible_to_user: true,
+      product_location: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
-  
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target;
+    const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value, type, checked } = e.target;
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: type === 'checkbox' ? checked : value
       }));
+    };
+
+    const handleCategoryKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        const value = (e.target as HTMLInputElement).value.trim();
+        if (value && !value.startsWith('#')) {
+          setFormData(prev => ({
+            ...prev,
+            product_category: '#' + value
+          }));
+        }
+      }
     };
   
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,13 +101,19 @@ import {
           } catch (error) {
             throw new Error(`Gagal upload gambar: ${(error as Error).message}`);
           }
-        }
-  
+        }        // Ensure category has # prefix before submitting
+        const categoryValue = formData.product_category.trim();
+        const formattedCategory = categoryValue && !categoryValue.startsWith('#') ? '#' + categoryValue : categoryValue;
+
         const requestData = {
           name: formData.name,
           id_product: formData.id_product,
           stock: parseInt(formData.stock),
-          image: imageUrl || 'https://via.placeholder.com/150'
+          image: imageUrl || 'https://via.placeholder.com/150',
+          added_by: sessionStorage.getItem('username') || 'unknown',
+          product_category: formattedCategory,
+          visible_to_user: formData.visible_to_user,
+          product_location: formData.product_location
         };console.log('Mengirim data produk:', requestData);
   
         const response = await apiService.post('/product/create', requestData);
@@ -125,7 +145,10 @@ import {
           name: '',
           id_product: '',
           stock: '',
-          image: null
+          image: null,
+          product_category: '',
+          visible_to_user: true,
+          product_location: ''
         });
 
         // Trigger refresh data products untuk update product list
@@ -143,23 +166,24 @@ import {
         setLoading(false);
       }
     };
-  
     return (
       <Dialog 
         open={open} 
         onClose={onClose}
         sx={{
           '& .MuiDialog-container': {
-            alignItems: 'flex-start',
-            pt: '100px'
+            alignItems: 'center', // Center vertically
+            justifyContent: 'center' // Center horizontally
           },
           '& .MuiDialog-paper': {
             width: 400,
-            maxHeight: 'fit-content',
+            maxHeight: '85vh', // Limit height for better UX
             borderRadius: '10px',
             position: 'relative',
             overflow: 'hidden',
-            backgroundColor: 'white'
+            backgroundColor: 'white',
+            display: 'flex',
+            flexDirection: 'column'
           }
         }}
       >
@@ -205,10 +229,26 @@ import {
           >
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
-        </Box>
-  
-        {/* Form Content */}
-        <DialogContent sx={{ p: 2 }}>
+        </Box>        {/* Form Content */}
+        <DialogContent sx={{ 
+          p: 2, 
+          flex: 1, 
+          overflow: 'auto', // Make content scrollable
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#f1f1f1',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#c1c1c1',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: '#a8a8a8',
+          }
+        }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {error && (
               <Typography color="error" fontSize="12px" mb={1}>
@@ -283,6 +323,83 @@ import {
                   }
                 }}
               />
+            </Box>            {/* Kategori Produk */}
+            <Box>
+              <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: '#666' }}>
+                Kategori Produk
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                name="product_category"
+                value={formData.product_category}
+                onChange={handleInputChange}
+                onKeyPress={handleCategoryKeyPress}
+                variant="outlined"
+                placeholder="contoh: computer, electronics"
+                helperText="Tekan Enter untuk menambahkan # otomatis"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    height: 32,
+                    fontSize: '13px',
+                    bgcolor: '#F5F5F5'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: '11px',
+                    color: '#999',
+                    marginTop: '4px'
+                  }
+                }}
+              />
+            </Box>
+  
+            {/* Lokasi Produk */}
+            <Box>
+              <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: '#666' }}>
+                Lokasi Produk
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                name="product_location"
+                value={formData.product_location}
+                onChange={handleInputChange}
+                variant="outlined"
+                placeholder="contoh: labor 404"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    height: 32,
+                    fontSize: '13px',
+                    bgcolor: '#F5F5F5'
+                  }
+                }}
+              />
+            </Box>
+  
+            {/* Visible to User */}
+            <Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    name="visible_to_user"
+                    checked={formData.visible_to_user}
+                    onChange={handleInputChange}
+                    size="small"
+                    sx={{
+                      color: '#666',
+                      '&.Mui-checked': {
+                        color: '#142356',
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Typography variant="caption" sx={{ color: '#666', fontSize: '13px' }}>
+                    Tampilkan produk ke pengguna
+                  </Typography>
+                }
+                sx={{ ml: 0 }}
+              />
             </Box>
   
             {/* Gambar Produk */}
@@ -337,7 +454,7 @@ import {
               <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={loading || !formData.name || !formData.id_product || !formData.stock}
+                disabled={loading || !formData.name || !formData.id_product || !formData.stock || !formData.product_category || !formData.product_location}
                 sx={{
                   minWidth: 'unset',
                   height: 28,

@@ -23,7 +23,9 @@ import { useState, useEffect } from 'react';
 import ListPeminjamanDialog from './ListPeminjamanDialog';
 import { useListPinjam } from '../context/ListPinjamContext';
 import NotificationPopover from './NotificationPopover';
+import UserDetailsModal from './UserDetailsModal';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/useAuth';
 
 interface HeaderProps {
   onAssetAdded?: () => void;
@@ -31,29 +33,32 @@ interface HeaderProps {
 
 const Header = ({ onAssetAdded }: HeaderProps) => {
   const { listPinjam } = useListPinjam();
+  const { userRole, userData, logout } = useAuth();
   const [isListDialogOpen, setIsListDialogOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchValue, setSearchValue] = useState('');
-  const [userRole, setUserRole] = useState<string>('');
   const [isAddAssetModalOpen, setIsAddAssetModalOpen] = useState(false);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false);
   const location = useLocation();
 
   const open = Boolean(anchorEl);
   const isPeminjamanPage = location.pathname.includes('/dashboard/peminjaman');
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
   const handleClose = () => {
     setAnchorEl(null);
   };
 
   const handleLogout = () => {
     handleClose();
-    sessionStorage.clear();
-    window.location.href = '/login';
+    logout();
+  };
+  const handleUserClick = () => {
+    setIsUserDetailsModalOpen(true);
+  };
+
+  const handleProfileMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    event.stopPropagation(); // Prevent triggering user details modal
+    setAnchorEl(event.currentTarget);
   };
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -65,12 +70,9 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
     setSearchValue('');
     window.dispatchEvent(new CustomEvent('searchChange', { detail: '' }));
   };
-
   useEffect(() => {
     setSearchValue('');
     window.dispatchEvent(new CustomEvent('searchChange', { detail: '' }));
-    const role = sessionStorage.getItem('userRole') || '';
-    setUserRole(role);
   }, []);
 
   const handleOpenList = (event: React.MouseEvent<HTMLElement>) => {
@@ -131,7 +133,7 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
             boxShadow: '0 0 0 2px #4E71FF'
           }
         }}>          <SearchIcon sx={{ color: '#222', mr: 2 }} />          <InputBase
-            placeholder="Cari by nama, ID, stok, atau status..."
+            placeholder="Cari by nama, ID, stok, #kategori, lokasi, atau status..."
             value={searchValue}
             onChange={handleSearchChange}
             sx={{
@@ -184,10 +186,7 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
             <Badge badgeContent={2} color="error">
               <NotificationsIcon sx={{ fontSize: 24, color: '#666' }} />
             </Badge>
-          </IconButton>
-
-          <Box
-            onClick={handleClick}
+          </IconButton>          <Box
             sx={{
               bgcolor: 'white',
               borderRadius: 10,
@@ -196,15 +195,67 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
               display: 'flex',
               alignItems: 'center',
               minWidth: 200,
-              cursor: 'pointer',
-              '&:hover': { bgcolor: '#f5f5f5' }
+              border: '2px solid transparent',
+              transition: 'all 0.2s ease-in-out',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              '&:hover': { 
+                bgcolor: '#f8f9ff',
+                borderColor: '#4355B9',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(67, 85, 185, 0.2)'
+              }
             }}
-          >
-            <Avatar src="https://i.pravatar.cc/100" sx={{ width: 40, height: 40, mr: 2 }} />
-            <Box>
-              <Typography fontWeight="bold" fontSize={16}>nama pengguna</Typography>
-              <Typography fontSize={14} color="#666">aktor</Typography>
+          >            <Box 
+              onClick={handleUserClick}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flex: 1,
+                cursor: 'pointer'
+              }}
+            >
+              <Avatar 
+                src={userData ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.full_name || userData.username)}&background=4355B9&color=fff&size=40` : "https://i.pravatar.cc/100"}
+                sx={{ width: 40, height: 40, mr: 2 }} 
+              />
+              <Box>
+                <Typography 
+                  fontWeight="bold" 
+                  fontSize={16}
+                  sx={{
+                    color: '#1a1a1a',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                    fontWeight: 600
+                  }}
+                >
+                  {userData?.full_name || userData?.username || 'nama pengguna'}
+                </Typography>
+                <Typography 
+                  fontSize={14} 
+                  sx={{
+                    color: '#4355B9',
+                    fontWeight: 500,
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {userData?.role || userRole || 'aktor'}
+                </Typography>
+              </Box>
             </Box>
+            <IconButton 
+              onClick={handleProfileMenuClick}
+              size="small"
+              sx={{
+                ml: 1,
+                color: '#666',
+                '&:hover': {
+                  bgcolor: 'rgba(67, 85, 185, 0.1)',
+                  color: '#4355B9'
+                }
+              }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
           </Box>
 
           <Menu
@@ -279,12 +330,16 @@ const Header = ({ onAssetAdded }: HeaderProps) => {
           setIsAddAssetModalOpen(false);
           onAssetAdded?.();
         }}
-      />
-
-      <NotificationPopover
+      />      <NotificationPopover
         open={Boolean(notificationAnchorEl)}
         anchorEl={notificationAnchorEl}
         onClose={() => setNotificationAnchorEl(null)}
+      />
+
+      <UserDetailsModal
+        open={isUserDetailsModalOpen}
+        onClose={() => setIsUserDetailsModalOpen(false)}
+        userData={userData}
       />
     </Box>
   );

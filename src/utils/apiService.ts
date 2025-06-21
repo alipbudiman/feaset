@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * API Service with automatic token refresh functionality
  * Handles 403 errors by refreshing the token and retrying the request
@@ -103,7 +104,6 @@ class ApiService {
       throw error;
     }
   }
-
   /**
    * Make an authenticated API request with automatic token refresh
    */
@@ -113,6 +113,8 @@ class ApiService {
     if (!token) {
       throw new Error('No access token available');
     }
+
+    console.log('ApiService.fetchWithAuth: making request to URL =', url);
 
     // Prepare headers with authorization
     const headers = {
@@ -160,9 +162,7 @@ class ApiService {
     }
 
     return response;
-  }
-
-  /**
+  }  /**
    * GET request with auto token refresh
    */
   async get(endpoint: string): Promise<Response> {
@@ -269,7 +269,6 @@ class ApiService {
       body: body,
     });
   }
-
   /**
    * Health check request (no authentication required)
    */
@@ -281,6 +280,97 @@ class ApiService {
         'Accept': 'application/json'
       },
     });
+  }  /**
+   * Get user account information
+   */
+  async getUserAccount(): Promise<Response> {
+    console.log('Making request to /user/get_account');
+    return this.fetchWithAuth(`${HOST}/user/get_account`);
+  }
+
+  /**
+   * Get list of all users
+   */
+  async getUsers(): Promise<Response> {
+    console.log('Making request to /user/list');
+    return this.fetchWithAuth(`${HOST}/user/list`);
+  }
+
+  /**
+   * Update user information
+   * Note: This endpoint may not exist in the current API, but we'll implement it for future use
+   */
+  async updateUser(username: string, userData: any): Promise<Response> {
+    console.log('Making request to update user:', username);
+    return this.fetchWithAuth(`${HOST}/user/update/${username}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  /**
+   * Delete user
+   * Note: This endpoint may not exist in the current API, but we'll implement it for future use
+   */
+  async deleteUser(username: string): Promise<Response> {
+    console.log('Making request to delete user:', username);
+    return this.fetchWithAuth(`${HOST}/user/delete/${username}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ===============================
+  // PRODUCT MANAGEMENT METHODS
+  // ===============================
+
+  /**
+   * Get list of products with pagination
+   */
+  async getProducts(index: number = 0): Promise<Response> {
+    console.log('Making request to /product/list with index:', index);
+    return this.fetchWithAuth(`${HOST}/product/list?index=${index}`);
+  }
+
+  /**
+   * Create a new product
+   */
+  async createProduct(productData: any): Promise<Response> {
+    console.log('Making request to create product:', productData);
+    return this.fetchWithAuth(`${HOST}/product/create`, {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  /**
+   * Update an existing product
+   */
+  async updateProduct(productId: string, productData: any): Promise<Response> {
+    console.log('Making request to update product:', productId, productData);
+    return this.fetchWithAuth(`${HOST}/product/update/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify(productData),
+    });
+  }
+
+  /**
+   * Delete a product by ID
+   */
+  async deleteProduct(productId: string): Promise<Response> {
+    console.log('Making request to delete product:', productId);
+    return this.fetchWithAuth(`${HOST}/product/delete/${productId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Upload image for product
+   */
+  async uploadImage(file: File): Promise<Response> {
+    console.log('Making request to upload image:', file.name);
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.uploadFile(`${HOST}/image/upload`, formData);
   }
 }
 

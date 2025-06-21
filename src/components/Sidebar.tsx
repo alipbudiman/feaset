@@ -30,6 +30,12 @@ const menuItems: MenuItem[] = [
     path: '/dashboard/buat-akun'
   },
   {
+    label: 'Manajemen User',
+    icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/shapes.png',
+    roles: ['admin', 'master'],
+    path: '/dashboard/user-management'
+  },
+  {
     label: 'Terima Aset',
     icon: '/assets/form peminjaman_pengembalian_buat akun_terima aset_persetujuan/terima.png',
     roles: ['admin', 'master'],
