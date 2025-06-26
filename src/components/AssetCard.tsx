@@ -13,25 +13,48 @@ interface AssetCardProps {
   gambar: string; // This will now contain display_url
   product_category?: string;
   product_location?: string;
-  onProductUpdated?: () => void; // Callback when product is updated
+  onProductUpdated?: () => void; // Callback when product is updated  // New props for quantity synchronization
+  currentQuantity?: number;
+  onQuantityChange?: (productId: string, change: number) => void;
+  onAddToList?: (productId: string) => void;
 }
 
-const AssetCard = ({ id, nama, stok, gambar, product_category, product_location, onProductUpdated }: AssetCardProps) => {
-  const [jumlah, setJumlah] = useState(0);
+const AssetCard = ({ 
+  id, 
+  nama, 
+  stok, 
+  gambar, 
+  product_category, 
+  product_location, 
+  onProductUpdated,
+  currentQuantity = 0,
+  onQuantityChange,
+  onAddToList
+}: AssetCardProps) => {
+  // Use external quantity if provided, otherwise use internal state for backward compatibility
+  const [internalJumlah, setInternalJumlah] = useState(0);
+  const jumlah = currentQuantity !== undefined ? currentQuantity : internalJumlah;
+  
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { addToListPinjam } = useListPinjam();
   const auth = useAuth();
-  const handleAddToList = () => {
+    const handleAddToList = () => {
     if (jumlah > 0 && jumlah <= stok) {
-      addToListPinjam({
-        id_product: id,
-        name: nama,
-        stock: stok,
-        image: gambar,
-        jumlah
-      });
-      setJumlah(0);
+      if (onAddToList) {
+        // Use external handler if provided
+        onAddToList(id);
+      } else {
+        // Fallback to internal logic
+        addToListPinjam({
+          id_product: id,
+          name: nama,
+          stock: stok,
+          image: gambar,
+          jumlah
+        });
+        setInternalJumlah(0);
+      }
     }
   };
 
@@ -57,14 +80,26 @@ const AssetCard = ({ id, nama, stok, gambar, product_category, product_location,
       onProductUpdated();
     }
   };
-
   // Check if user has admin privileges
   const userRole = auth?.userRole;
   const canManageProducts = userRole === 'master' || userRole === 'admin';
 
-  // Fungsi untuk mengubah jumlah
-  const decreaseJumlah = () => setJumlah(prev => Math.max(0, prev - 1));
-  const increaseJumlah = () => setJumlah(prev => Math.min(stok, prev + 1));
+  // Fungsi untuk mengubah jumlah - use external handlers if provided
+  const decreaseJumlah = () => {
+    if (onQuantityChange) {
+      onQuantityChange(id, -1);
+    } else {
+      setInternalJumlah(prev => Math.max(0, prev - 1));
+    }
+  };
+  
+  const increaseJumlah = () => {
+    if (onQuantityChange) {
+      onQuantityChange(id, 1);
+    } else {
+      setInternalJumlah(prev => Math.min(stok, prev + 1));
+    }
+  };
 
   // Update getImageUrl function
   const getImageUrl = (url: string) => {
