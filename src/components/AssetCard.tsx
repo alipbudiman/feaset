@@ -1,6 +1,6 @@
 import { Box, Typography, Button } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Info as InfoIcon } from '@mui/icons-material';
 import { useListPinjam } from '../context/ListPinjamContext';
 import { useAuth } from '../contexts/useAuth';
 import EditProductModal from './EditProductModal';
@@ -17,6 +17,8 @@ interface AssetCardProps {
   currentQuantity?: number;
   onQuantityChange?: (productId: string, change: number) => void;
   onAddToList?: (productId: string) => void;
+  // New prop for product description
+  onShowDescription?: (productId: string) => void;
 }
 
 const AssetCard = ({ 
@@ -29,7 +31,8 @@ const AssetCard = ({
   onProductUpdated,
   currentQuantity = 0,
   onQuantityChange,
-  onAddToList
+  onAddToList,
+  onShowDescription
 }: AssetCardProps) => {
   // Use external quantity if provided, otherwise use internal state for backward compatibility
   const [internalJumlah, setInternalJumlah] = useState(0);
@@ -258,7 +261,7 @@ const AssetCard = ({
         color="#e3f2fd"
         mb={1}
       >
-        Stok: {stok}
+        Quantity: {stok}
       </Typography>
 
       <Box sx={{ 
@@ -332,6 +335,30 @@ const AssetCard = ({
         }}
       >
         Tambahkan ke List
+      </Button>
+
+      {/* Product Description Button */}
+      <Button
+        fullWidth
+        variant="outlined"
+        onClick={() => onShowDescription && onShowDescription(id)}
+        startIcon={<InfoIcon />}
+        sx={{
+          mt: 1,
+          height: 32,
+          borderRadius: '8px',
+          borderColor: 'white',
+          color: 'white',
+          fontWeight: 'bold',
+          textTransform: 'none',
+          fontSize: 13,
+          '&:hover': {
+            borderColor: 'white',
+            bgcolor: 'rgba(255,255,255,0.1)'
+          }
+        }}
+      >
+        Lihat Detail
       </Button>
 
       {/* Admin Action Buttons */}

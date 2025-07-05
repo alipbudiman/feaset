@@ -111,10 +111,12 @@ class ApiService {
     const token = this.getAccessToken();
     
     if (!token) {
+      console.error('❌ ApiService.fetchWithAuth: No access token available');
       throw new Error('No access token available');
     }
 
-    console.log('ApiService.fetchWithAuth: making request to URL =', url);
+    console.log('✅ ApiService.fetchWithAuth: making request to URL =', url);
+    console.log('🔑 ApiService.fetchWithAuth: token available =', token ? `${token.slice(0, 20)}...` : 'null');
 
     // Prepare headers with authorization
     const headers = {
@@ -124,15 +126,22 @@ class ApiService {
       ...options.headers,
     };
 
+    console.log('📤 ApiService.fetchWithAuth: request headers =', {
+      ...headers,
+      Authorization: `Bearer ${token.slice(0, 20)}...` // Mask token in logs
+    });
+
     // Make the initial request
     let response = await fetch(url, {
       ...options,
       headers,
     });
 
+    console.log('📥 ApiService.fetchWithAuth: response status =', response.status);
+
     // If we get a 403, try to refresh the token and retry
     if (response.status === 403) {
-      console.log('Token expired, attempting to refresh...');
+      console.log('🔄 Token expired, attempting to refresh...');
       
       try {
         const newToken = await this.refreshAccessToken();
@@ -143,10 +152,13 @@ class ApiService {
           'Authorization': `Bearer ${newToken}`,
         };
 
+        console.log('🔄 Retrying request with refreshed token...');
         response = await fetch(url, {
           ...options,
           headers: retryHeaders,
         });
+
+        console.log('📥 ApiService.fetchWithAuth: retry response status =', response.status);
 
         if (!response.ok && response.status === 403) {
           // If still 403 after refresh, clear tokens and redirect

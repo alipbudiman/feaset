@@ -3,6 +3,7 @@ import Header from '../../components/Header';
 import AssetCard from '../../components/AssetCard';
 import EditProductModal from '../../components/EditProductModal';
 import DeleteProductDialog from '../../components/DeleteProductDialog';
+import ProductDescriptionModal from '../../components/ProductDescriptionModal';
 import { 
   Box, 
   CircularProgress, 
@@ -32,7 +33,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import InfoIcon from '@mui/icons-material/Info';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -43,27 +45,13 @@ import Persetujuan from '../Persetujuan/Persetujuan';
 import { apiService } from '../../utils/apiService';
 import { useListPinjam } from '../../context/ListPinjamContext';
 import { useAuth } from '../../contexts/useAuth';
-
-interface Product {
-  name: string;
-  id_product: string;
-  stock: number;
-  image: string;
-  added_by: string;
-  product_category: string;
-  visible_to_user: boolean;
-  product_location: string;
-}
+import { useProductDataSafe, type Product } from '../../hooks/useProductDataSafe';
 
 // Komponen untuk halaman Peminjaman
 const PeminjamanPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // State untuk pencarian dan filter
   const [page, setPage] = useState(1);
   const [searchValue, setSearchValue] = useState('');
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   
   // New states for view mode and filters
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -71,21 +59,38 @@ const PeminjamanPage = () => {
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [availableLocations, setAvailableLocations] = useState<string[]>([]);  const [availableTags, setAvailableTags] = useState<string[]>([]);  const [backgroundLoadingComplete, setBackgroundLoadingComplete] = useState(false);
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   // States for modals and table actions
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productQuantities, setProductQuantities] = useState<{[key: string]: number}>({});
+
+  // Use improved product data hook with anti-spam protection
+  const {
+    products,
+    allProducts,
+    loading,
+    error,
+    totalProducts,
+    backgroundLoadingComplete,
+    fetchPageProducts,
+    refreshProducts,
+    backgroundLoadAllProducts
+  } = useProductDataSafe({
+    itemsPerPage: 12,
+    enableBackgroundLoading: true
+  });
 
   // Hooks
   const { addToListPinjam } = useListPinjam();
   const auth = useAuth();
 
   const itemsPerPage = 12;
-  const location = useLocation();
-  console.log('🔧 PeminjamanPage initialized with itemsPerPage:', itemsPerPage);
+  console.log('🔧 PeminjamanPage initialized with smart cache system');
 
   // Check if user has admin privileges
   const userRole = auth?.userRole;
@@ -127,18 +132,23 @@ const PeminjamanPage = () => {
     setShowDeleteDialog(true);
   };
 
+  const handleShowDescription = (product: Product) => {
+    setSelectedProduct(product);
+    setShowDescriptionModal(true);
+  };
+
   const handleProductUpdated = () => {
     setShowEditModal(false);
     setSelectedProduct(null);
     // Trigger refresh of products
-    forceRefreshProducts();
+    refreshProducts();
   };
 
   const handleProductDeleted = () => {
     setShowDeleteDialog(false);
     setSelectedProduct(null);
     // Trigger refresh of products
-    forceRefreshProducts();
+    refreshProducts();
   };
 
   // Function to extract filter options from products
@@ -197,382 +207,51 @@ const PeminjamanPage = () => {
         locations: filterOptions.locations.length,
         tags: filterOptions.tags.length
       });
-    }  }, [products, allProducts]);
-
-  // Background loading semua produk secara bertahap
-  const backgroundLoadAllProducts = useCallback(async (startIndex: number = 0) => {
-    try {
-      const role = sessionStorage.getItem('userRole') || 'user';
-      let currentIndex = startIndex;
-      let allLoadedProducts: Product[] = [...allProducts];
-      
-      // Cek cache untuk data lengkap
-      const allProductsCacheKey = `all_products_${role}`;
-      const cachedAllProducts = sessionStorage.getItem(allProductsCacheKey);
-      
-      if (cachedAllProducts) {
-        const { data, timestamp } = JSON.parse(cachedAllProducts);
-        // Cache valid for 10 minutes untuk data lengkap
-        if (Date.now() - timestamp < 10 * 60 * 1000) {
-          setAllProducts(data);
-          setBackgroundLoadingComplete(true);
-          return;
-        }
-      }
-
-      while (true) {
-        const response = await apiService.get(`/product/list?index=${currentIndex}&role=${role}`);
-        
-        if (!response.ok) break;
-        
-        const data = await response.json();
-        
-        if (!data.product_list || data.product_list.length === 0) {
-          break; // No more data
-        }
-          // Append new products to existing ones
-        allLoadedProducts = [...allLoadedProducts, ...data.product_list];
-        setAllProducts(allLoadedProducts);
-        
-        // Check if we've reached the last page
-        if (currentIndex >= data.last_index || data.product_list.length < itemsPerPage) {
-          break;
-        }
-        
-        currentIndex++;
-        
-        // Add small delay to prevent overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      // Save complete data to cache
-      sessionStorage.setItem(allProductsCacheKey, JSON.stringify({
-        data: allLoadedProducts,
-        timestamp: Date.now()
-      }));
-      
-      setBackgroundLoadingComplete(true);
-      console.log(`Background loading complete: ${allLoadedProducts.length} products loaded`);
-      
-    } catch (err) {
-      console.error('Error in background loading:', err);
     }
-  }, [allProducts, itemsPerPage]);
+  }, [products, allProducts]);
 
-  // Optimasi fetch data dengan cache dan background loading
-  const fetchPageProducts = useCallback(async (forceRefresh = false) => {
-    try {
-      const role = sessionStorage.getItem('userRole') || 'user';
-        // Check cache first
-      const cacheKey = `products_${page}_${role}`;
-      const cachedData = sessionStorage.getItem(cacheKey);
-      
-      if (cachedData && !forceRefresh) {
-        const { data, timestamp } = JSON.parse(cachedData);
-        // Cache valid for 5 minutes
-        if (Date.now() - timestamp < 5 * 60 * 1000) {
-          setProducts(data.product_list);
-          setTotalProducts(data.total_products);
-            // Start background loading jika belum complete dan ini page 1
-          if (page === 1 && !backgroundLoadingComplete) {            // Include cached data (index 0) in allProducts first
-            setAllProducts(prevProducts => {
-              const existingProductIds = prevProducts.map((p: Product) => p.id_product);
-              const newProducts = (data.product_list || []).filter(
-                (product: Product) => !existingProductIds.includes(product.id_product)
-              );
-              const updatedProducts = [...prevProducts, ...newProducts];
-              console.log(`📦 Added ${newProducts.length} cached products from page 1 to search dataset. Total: ${updatedProducts.length}`);
-              return updatedProducts;
-            });
-            
-            backgroundLoadAllProducts(1); // Start from index 1 since we already have index 0
-          }
-          return;
-        }
-      }      setLoading(true);
-      
-      // API call - ensure we're getting the right index
-      const apiIndex = page - 1; // Convert page to 0-based index
-      console.log(`🌐 API Call: page=${page}, apiIndex=${apiIndex}, role=${role}`);
-      
-      const response = await apiService.get(`/product/list?index=${apiIndex}&role=${role}`);
-
-      if (!response.ok) throw new Error('Gagal mengambil data');
-      
-      const data = await response.json();
-      
-      console.log(`📊 API Response for index ${apiIndex}:`, {
-        productCount: data.product_list?.length || 0,
-        totalProducts: data.total_products,
-        lastIndex: data.last_index,
-        sampleProducts: data.product_list?.slice(0, 2).map((p: Product) => ({ id: p.id_product, name: p.name }))
-      });
-      
-      // Save to cache
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));        setProducts(data.product_list || []);
-      setTotalProducts(data.total_products || 0);
-      
-      console.log(`📦 Set products for page ${page}:`, {
-        count: (data.product_list || []).length,
-        totalAvailable: data.total_products,
-        firstFewProducts: (data.product_list || []).slice(0, 3).map((p: Product) => p.name)
-      });
-      
-      // Start background loading untuk semua data jika ini page 1
-      if (page === 1 && !backgroundLoadingComplete) {
-        // Include current page data (index 0) in allProducts first
-        setAllProducts(prevProducts => {
-          const existingProductIds = prevProducts.map((p: Product) => p.id_product);
-          const newProducts = (data.product_list || []).filter(
-            (product: Product) => !existingProductIds.includes(product.id_product)
-          );
-          const updatedProducts = [...prevProducts, ...newProducts];
-          console.log(`📦 Added ${newProducts.length} products from page 1 to search dataset. Total: ${updatedProducts.length}`);
-          console.log(`📦 Updated allProducts:`, updatedProducts);
-          return updatedProducts;
-        });
-        
-        // Start background loading from next index
-        setTimeout(() => {
-          console.log('Starting background loading from index 1...');
-          backgroundLoadAllProducts(1);
-        }, 500); // Delay 500ms agar tidak mengganggu loading page pertama
-      }
-      
-      // Also ensure current page products are always in allProducts for immediate search
-      if (data.product_list && data.product_list.length > 0) {
-        setAllProducts(prevProducts => {
-          const existingProductIds = prevProducts.map((p: Product) => p.id_product);
-          const newProducts = (data.product_list || []).filter(
-            (product: Product) => !existingProductIds.includes(product.id_product)
-          );
-          if (newProducts.length > 0) {
-            const updatedProducts = [...prevProducts, ...newProducts];
-            console.log(`📦 Ensured current page products in allProducts. Added: ${newProducts.length}, Total: ${updatedProducts.length}`);
-            return updatedProducts;
-          }
-          return prevProducts;
-        });
-      }
-
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Gagal memuat data');
-    } finally {
-      setLoading(false);
-    }  }, [page, backgroundLoadingComplete, backgroundLoadAllProducts]);
-
-  // Function untuk force refresh semua data (clear cache dan reload)
-  const forceRefreshProducts = useCallback(async () => {
-    try {
-      console.log('🚀 Starting force refresh of products data...');
-      console.log('📊 Current state before refresh:', {
-        productsCount: products.length,
-        allProductsCount: allProducts.length,
-        currentPage: page,
-        backgroundLoadingComplete,
-        searchValue,
-        currentPath: location.pathname
-      });
-      
-      // Clear all related cache
-      const keysToRemove = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && (key.startsWith('products_') || key.startsWith('all_products_'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => sessionStorage.removeItem(key));
-      console.log('🗑️ Cleared cache keys:', keysToRemove);
-      
-      // Reset state
-      setBackgroundLoadingComplete(false);
-      setAllProducts([]);
-      console.log('🔄 Reset background loading state and products');
-      
-      // Force reload current page data
-      console.log('📄 Force reloading current page data...');
-      setLoading(true); // Show loading indicator
-      await fetchPageProducts(true);
-      
-      // Start background loading again
-      setTimeout(() => {
-        console.log('🔄 Starting background loading again...');
-        backgroundLoadAllProducts(0); // Start from index 0 to include first page
-      }, 500);
-      
-      console.log('✅ Products data force refreshed successfully after stock change');
-      
-      // Additional verification
-      setTimeout(() => {
-        console.log('🔍 Post-refresh state verification:', {
-          productsCount: products.length,
-          allProductsCount: allProducts.length,
-          loading: loading,
-          backgroundLoadingComplete: backgroundLoadingComplete
-        });
-      }, 1000);
-      
-    } catch (error) {
-      console.error('❌ Error force refreshing products:', error);
-      setLoading(false); // Ensure loading state is cleared on error
-    }
-  }, [products.length, allProducts.length, page, backgroundLoadingComplete, searchValue, location.pathname, fetchPageProducts, backgroundLoadAllProducts, loading]);
-
-  // Optimasi useEffect untuk loading data
+  // Load data when page changes using the new hook (consolidated effect)
   useEffect(() => {
-    // Always fetch current page products first
-    fetchPageProducts();
-    
-    // Start background loading for complete dataset if not yet complete
-    if (!backgroundLoadingComplete && allProducts.length === 0) {
-      console.log('🔄 Starting background loading for complete dataset...');
-      setTimeout(() => {
-        backgroundLoadAllProducts(0);
-      }, 500); // Small delay to not interfere with current page loading
-    }
-  }, [page, fetchPageProducts, backgroundLoadingComplete, allProducts.length, backgroundLoadAllProducts]);
+    console.log(`📄 Page changed to ${page}, fetching products...`);
+    fetchPageProducts(page);
+  }, [page, fetchPageProducts]);
 
-  // Separate useEffect for handling search - this won't interfere with pagination
+  // Initialize background loading only once after component mount
+  const backgroundLoadingInitialized = useRef(false);
   useEffect(() => {
-    // Start background loading if user starts searching but data is not complete
-    if (searchValue && !backgroundLoadingComplete && allProducts.length === 0) {
-      console.log('🔍 Search initiated, starting background loading...');
-      backgroundLoadAllProducts(0);
+    if (!backgroundLoadingComplete && !backgroundLoadingInitialized.current) {
+      console.log('🚀 Starting initial background loading...');
+      backgroundLoadingInitialized.current = true;
+      backgroundLoadAllProducts();
     }
-  }, [searchValue, backgroundLoadingComplete, allProducts.length, backgroundLoadAllProducts]);// Check for refresh flag when PeminjamanPage mounts
+  }, [backgroundLoadingComplete, backgroundLoadAllProducts]);
+
+  // Reset page when filters change (optimized to prevent spam)
   useEffect(() => {
-    console.log('🎯 PeminjamanPage mounted, checking for refresh flag...');
-    
-    // Check immediately
-    const checkRefreshFlag = () => {
-      const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
-      console.log('🔍 Checking refresh flag:', { needsRefresh, currentPath: location.pathname });
-      
-      if (needsRefresh === 'true') {
-        console.log('✅ Refresh flag detected! Triggering force refresh...');
-        sessionStorage.removeItem('peminjamanNeedsRefresh');
-        forceRefreshProducts();
-        return true;
-      }
-      return false;
-    };
-
-    // Check immediately
-    if (!checkRefreshFlag()) {
-      // Also check after a short delay to catch race conditions
-      const checkTimer = setTimeout(() => {
-        console.log('⏰ Delayed check for refresh flag...');
-        checkRefreshFlag();
-      }, 100);
-
-      return () => clearTimeout(checkTimer);
+    if (page !== 1) {
+      console.log('🔄 Filters changed, resetting to page 1');
+      setPage(1); // This will trigger the page useEffect above
     }
-  }, [forceRefreshProducts, location.pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue, selectedCategory, selectedLocation, selectedTag]);
 
-  // Check for refresh flag when user navigates to peminjaman page
-  useEffect(() => {
-    console.log('🧭 Location changed to:', location.pathname);
-    
-    if (location.pathname === '/dashboard/peminjaman') {
-      console.log('📍 Navigation to peminjaman detected, checking refresh flag...');
-      
-      // Multiple checks with different delays to ensure we catch the flag
-      const timers: NodeJS.Timeout[] = [];
-      
-      [50, 150, 300].forEach((delay, index) => {
-        const timer = setTimeout(() => {
-          const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
-          console.log(`⏱️ Check ${index + 1} (${delay}ms delay):`, { needsRefresh });
-          
-          if (needsRefresh === 'true') {
-            console.log(`✅ Refresh flag found on check ${index + 1}! Triggering refresh...`);
-            sessionStorage.removeItem('peminjamanNeedsRefresh');
-            forceRefreshProducts();
-          }
-        }, delay);
-        
-        timers.push(timer);
-      });
-
-      return () => {
-        console.log('🧹 Cleaning up navigation timers');
-        timers.forEach(timer => clearTimeout(timer));
-      };
-    }
-  }, [location.pathname, forceRefreshProducts]); // Run when location changes
-
-// Handle search
+  // Handle search with smart cache system (simplified to prevent spam)
   useEffect(() => {
     const handleSearch = (event: CustomEvent<string>) => {
       const newSearchValue = event.detail;
       setSearchValue(newSearchValue);
       setPage(1);
-      
-      // If user starts searching and we don't have all products yet, 
-      // ensure we at least have the first page products included
-      if (newSearchValue && allProducts.length === 0 && products.length > 0) {
-        console.log('🔍 Starting search - ensuring first page products are included');
-        setAllProducts(products);
-        // Then start background loading from index 1
-        setTimeout(() => {
-          backgroundLoadAllProducts(1);
-        }, 100);
-      }
-      
-      // Force immediate update if we have products but not in allProducts
-      if (newSearchValue && products.length > 0 && allProducts.length < products.length) {
-        console.log('🔍 Force updating allProducts with current products');
-        setAllProducts(prevAll => {
-          const existingIds = prevAll.map(p => p.id_product);
-          const newProducts = products.filter(p => !existingIds.includes(p.id_product));
-          return [...prevAll, ...newProducts];
-        });
-      }
+      // Background loading is managed by the initialization effect only
     };
 
-    const handleDataRefresh = () => {
-      console.log('📢 Received data refresh event in PeminjamanPage');
-      forceRefreshProducts();
-    };
-
-    const handlePeminjamanDataRefresh = () => {
-      console.log('🏠 Received peminjaman-specific data refresh event');
-      console.log('🏠 Force refreshing PeminjamanPage products data...');
-      forceRefreshProducts();
-    };
-
-    console.log('🎧 Setting up event listeners in PeminjamanPage');
+    console.log('🎧 Setting up search listener');
     window.addEventListener('searchChange', handleSearch as EventListener);
-    window.addEventListener('dataRefresh', handleDataRefresh as EventListener);
-    window.addEventListener('peminjamanDataRefresh', handlePeminjamanDataRefresh as EventListener);
     
     return () => {
-      console.log('🧹 Cleaning up event listeners in PeminjamanPage');
+      console.log('🧹 Cleaning up search listener');
       window.removeEventListener('searchChange', handleSearch as EventListener);
-      window.removeEventListener('dataRefresh', handleDataRefresh as EventListener);
-      window.removeEventListener('peminjamanDataRefresh', handlePeminjamanDataRefresh as EventListener);
     };
-  }, [allProducts.length, products, backgroundLoadAllProducts, forceRefreshProducts]);
-
-  // Periodic check for refresh flag (safety net)
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const needsRefresh = sessionStorage.getItem('peminjamanNeedsRefresh');
-      if (needsRefresh === 'true' && location.pathname === '/dashboard/peminjaman') {        console.log('🔄 Periodic check found refresh flag, triggering refresh...');
-        sessionStorage.removeItem('peminjamanNeedsRefresh');
-        forceRefreshProducts();
-      }
-    }, 2000); // Check every 2 seconds
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [location.pathname, forceRefreshProducts]);
+  }, []); // No dependencies needed for event listener setup
 
   // Enhanced filtering function with multiple search criteria including tags  // Enhanced filter function that handles both search and dropdown filters
   const applyAllFilters = useCallback((productList: Product[]) => {
@@ -749,10 +428,9 @@ const PeminjamanPage = () => {
     }
   }, [backgroundLoadingComplete, allProducts.length]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [searchValue, selectedCategory, selectedLocation, selectedTag]);
+  // Note: Page reset on filter changes is handled by the effect above (line ~220)
+  // No need for duplicate effect here to prevent request spam
+  
   // Handler functions for filters
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: 'card' | 'list' | null) => {
     if (newViewMode !== null) {
@@ -815,7 +493,8 @@ const PeminjamanPage = () => {
             <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>ID Produk</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Kategori</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Lokasi</TableCell>
-            <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Stok</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Quantity</TableCell>
+            <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Deskripsi</TableCell>
             <TableCell sx={{ color: 'white', fontWeight: 'bold', bgcolor: '#4E71FF', position: 'sticky', top: 0, zIndex: 100, padding: '16px', fontSize: '1rem' }}>Aksi</TableCell>
           </TableRow>
         </TableHead>
@@ -849,6 +528,27 @@ const PeminjamanPage = () => {
                   color={product.stock > 0 ? 'success' : 'error'}
                   sx={{ fontSize: '0.875rem', height: 32, minWidth: 50 }}
                 />
+              </TableCell>
+              <TableCell sx={{ padding: '16px' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<InfoIcon />}
+                  onClick={() => handleShowDescription(product)}
+                  sx={{
+                    fontSize: '0.75rem',
+                    padding: '6px 12px',
+                    minWidth: 100,
+                    borderColor: '#4E71FF',
+                    color: '#4E71FF',
+                    '&:hover': {
+                      borderColor: '#3c5ae0',
+                      bgcolor: 'rgba(78, 113, 255, 0.1)'
+                    }
+                  }}
+                >
+                  Lihat Detail
+                </Button>
               </TableCell>              <TableCell sx={{ padding: '16px' }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, alignItems: 'flex-start' }}>
                   {/* Quantity selector and Add to List */}
@@ -1273,12 +973,18 @@ const PeminjamanPage = () => {
                   gambar={product.image}
                   product_category={product.product_category}
                   product_location={product.product_location}
-                  onProductUpdated={forceRefreshProducts}
+                  onProductUpdated={refreshProducts}
                   currentQuantity={productQuantities[product.id_product] || 0}
                   onQuantityChange={handleQuantityChange}                  onAddToList={(productId) => {
                     const productData = displayedProducts.find(p => p.id_product === productId);
                     if (productData) {
                       handleAddToList(productData);
+                    }
+                  }}
+                  onShowDescription={(productId) => {
+                    const productData = displayedProducts.find(p => p.id_product === productId);
+                    if (productData) {
+                      handleShowDescription(productData);
                     }
                   }}
                 />
@@ -1366,7 +1072,8 @@ const PeminjamanPage = () => {
             image: selectedProduct.image,
             product_category: selectedProduct.product_category || '',
             product_location: selectedProduct.product_location || '',
-            visible_to_user: selectedProduct.visible_to_user
+            visible_to_user: selectedProduct.visible_to_user,
+            product_description: selectedProduct.product_description || ''
           }}
           onProductUpdated={handleProductUpdated}
           currentUserRole={userRole}
@@ -1390,6 +1097,13 @@ const PeminjamanPage = () => {
           currentUserRole={userRole}
         />
       )}
+
+      {/* Product Description Modal */}
+      <ProductDescriptionModal
+        open={showDescriptionModal}
+        onClose={() => setShowDescriptionModal(false)}
+        product={selectedProduct}
+      />
     </Box>
   );
 };
@@ -1405,22 +1119,30 @@ const Dashboard = () => {
       const token = sessionStorage.getItem('token');
       const savedRole = sessionStorage.getItem('userRole');
 
+      console.log('🔍 Dashboard: Checking authentication...');
+      console.log('🔑 Dashboard: Token available =', token ? `${token.slice(0, 20)}...` : 'null');
+      console.log('👤 Dashboard: Saved role =', savedRole);
+
       if (!token) {
+        console.log('❌ Dashboard: No token found, redirecting to login');
         navigate('/login');
         return;
       }      try {
+        console.log('📡 Dashboard: Fetching user account data...');
         const response = await apiService.get('/user/get_account');
 
         if (response.ok) {
           const data = await response.json();
           const role = data.role || savedRole || 'user';
+          console.log('✅ Dashboard: User role fetched =', role);
           setUserRole(role);
           sessionStorage.setItem('userRole', role);
         } else {
+          console.log('⚠️ Dashboard: Failed to fetch user data, using saved role');
           setUserRole(savedRole || 'user');
         }
       } catch (error) {
-        console.error('Error fetching user role:', error);
+        console.error('❌ Dashboard: Error fetching user role:', error);
         setUserRole(savedRole || 'user');
       } finally {
         setIsLoading(false);

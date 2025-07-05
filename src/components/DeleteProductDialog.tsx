@@ -13,6 +13,7 @@ import {
 import { Warning as WarningIcon } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../utils/apiService';
+import { useProductEvents } from '../utils/eventDispatcher';
 
 interface ProductData {
   id_product: string;
@@ -38,6 +39,7 @@ const DeleteProductDialog: React.FC<DeleteProductDialogProps> = ({
   onProductDeleted,
   currentUserRole,
 }) => {
+  const { productDeleted } = useProductEvents();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +64,10 @@ const DeleteProductDialog: React.FC<DeleteProductDialogProps> = ({
 
       const result = await response.json();
       console.log('Product delete result:', result);
+
+      // Dispatch product deleted event untuk auto-refresh
+      productDeleted(product.id_product);
+      console.log('🗑️ Product deleted event dispatched for auto-refresh');
 
       toast.success('Produk berhasil dihapus');
       onProductDeleted();

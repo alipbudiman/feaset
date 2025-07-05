@@ -15,6 +15,7 @@ import {
   import CloseIcon from '@mui/icons-material/Close';
   import { useState } from 'react';
   import { apiService } from '../utils/apiService';
+  import { useProductEvents } from '../utils/eventDispatcher';
   
   interface AddAssetModalProps {
     open: boolean;
@@ -33,6 +34,8 @@ import {
       size: number;
     };
   }    const AddAssetModal = ({ open, onClose, onSuccess }: AddAssetModalProps) => {
+    const { productAdded } = useProductEvents();
+    
     const [formData, setFormData] = useState({
       name: '',
       id_product: '',
@@ -42,7 +45,8 @@ import {
       imageType: 'upload' as 'upload' | 'url', // New field to track image input type
       product_category: '',
       visible_to_user: true,
-      product_location: ''
+      product_location: '',
+      product_description: '' // New field for product description
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -140,7 +144,8 @@ import {
           added_by: sessionStorage.getItem('username') || 'unknown',
           product_category: formattedCategory,
           visible_to_user: formData.visible_to_user,
-          product_location: formData.product_location
+          product_location: formData.product_location,
+          product_description: formData.product_description.trim()
         };console.log('Mengirim data produk:', requestData);
   
         const response = await apiService.post('/product/create', requestData);
@@ -167,7 +172,16 @@ import {
         }
   
         const responseData = await response.json();
-        console.log('Response data:', responseData);        // Reset form
+        console.log('Response data:', responseData);
+
+        // Trigger product added event untuk auto-refresh
+        productAdded({
+          ...requestData,
+          id: responseData.id || requestData.id_product
+        });
+        console.log('🆕 Product added event dispatched for auto-refresh');
+
+        // Reset form
         setFormData({
           name: '',
           id_product: '',
@@ -177,13 +191,14 @@ import {
           imageType: 'upload',
           product_category: '',
           visible_to_user: true,
-          product_location: ''
+          product_location: '',
+          product_description: ''
         });
 
-        // Trigger refresh data products untuk update product list
+        // Legacy trigger untuk backward compatibility
         window.dispatchEvent(new CustomEvent('dataRefresh'));
-        console.log('🔄 Triggering data refresh after successful product creation');
-  
+        console.log('🔄 Legacy data refresh event also dispatched');
+
         onSuccess?.();
         onClose();
       } catch (err) {
@@ -404,6 +419,30 @@ import {
                 }}
               />
             </Box>
+
+            {/* Deskripsi Produk */}
+            <Box>
+              <Typography variant="caption" sx={{ mb: 0.5, display: 'block', color: '#666' }}>
+                Deskripsi Produk
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                name="product_description"
+                value={formData.product_description}
+                onChange={handleInputChange}
+                variant="outlined"
+                placeholder="Masukkan deskripsi produk..."
+                multiline
+                rows={3}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '13px',
+                    bgcolor: '#F5F5F5'
+                  }
+                }}
+              />
+            </Box>
   
             {/* Visible to User */}
             <Box>
@@ -540,7 +579,7 @@ import {
             <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1, mt: 0.5 }}>              <Button
                 variant="contained"
                 onClick={handleSubmit}
-                disabled={loading || !formData.name || !formData.id_product || !formData.stock || !formData.product_category || !formData.product_location || !isImageProvided()}
+                disabled={loading || !formData.name || !formData.id_product || !formData.stock || !formData.product_category || !formData.product_location || !formData.product_description || !isImageProvided()}
                 sx={{
                   minWidth: 'unset',
                   height: 28,

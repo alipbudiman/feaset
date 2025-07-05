@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-hot-toast';
 import { apiService } from '../utils/apiService';
+import { useProductEvents } from '../utils/eventDispatcher';
 
 interface ProductData {
   id_product?: string;
@@ -29,6 +30,7 @@ interface ProductData {
   product_category: string;
   product_location: string;
   visible_to_user: boolean;
+  product_description?: string;
 }
 
 interface EditProductModalProps {
@@ -46,6 +48,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
   onProductUpdated,
   currentUserRole,
 }) => {
+  const { productUpdated } = useProductEvents();
+  
   const [formData, setFormData] = useState<ProductData>({
     name: '',
     stock: 0,
@@ -53,7 +57,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
     product_category: '',
     product_location: '',
     visible_to_user: true,
-  });  const [loading, setLoading] = useState(false);
+    product_description: '',
+  });
+  
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -68,6 +75,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         product_category: product.product_category || '',
         product_location: product.product_location || '',
         visible_to_user: product.visible_to_user !== false,
+        product_description: product.product_description || '',
       });
       setImagePreview(product.image || '');
     }
@@ -83,7 +91,9 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         product_category: '',
         product_location: '',
         visible_to_user: true,
-      });      setError(null);
+        product_description: '',
+      });
+      setError(null);
     }
   }, [open]);
 
@@ -177,6 +187,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
         product_category: formData.product_category.trim(),
         product_location: formData.product_location.trim(),
         visible_to_user: formData.visible_to_user,
+        product_description: formData.product_description?.trim() || '',
       };
 
       console.log('Updating product with data:', updateData);
@@ -190,6 +201,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
 
       const result = await response.json();
       console.log('Product update result:', result);
+
+      // Dispatch product updated event untuk auto-refresh
+      productUpdated(product.id_product, updateData);
+      console.log('✏️ Product updated event dispatched for auto-refresh');
 
       toast.success('Produk berhasil diperbarui');
       onProductUpdated();
@@ -289,6 +304,18 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
             fullWidth
             disabled={loading}
             placeholder="e.g. labor 404, warehouse A"
+          />
+
+          {/* Product Description */}
+          <TextField
+            label="Deskripsi Produk"
+            value={formData.product_description}
+            onChange={handleInputChange('product_description')}
+            fullWidth
+            disabled={loading}
+            multiline
+            rows={4}
+            placeholder="Masukkan deskripsi produk..."
           />
 
           {/* Visible to User */}

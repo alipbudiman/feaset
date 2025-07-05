@@ -51,13 +51,16 @@ const Login = () => {
       if (data && data.access_token) {
         // Simpan token tanpa enkripsi
         sessionStorage.setItem('token', data.access_token);
+        console.log('✅ Login success: Access token saved =', data.access_token.slice(0, 20) + '...');
         
         // Also save refresh token if provided
         if (data.refresh_token) {
           sessionStorage.setItem('refresh_token', data.refresh_token);
+          console.log('✅ Login success: Refresh token saved =', data.refresh_token.slice(0, 20) + '...');
         }
           // Get user data using apiService
         try {
+          console.log('🔍 Login: Fetching user data...');
           const userResponse = await apiService.get('/user/get_account');
 
           if (!userResponse.ok) {

@@ -510,23 +510,31 @@ const BuatAkun = () => {
           </DialogActions>
         </Dialog>        {/* Users Table */}
         {!loading && !error && (
-          <TableContainer component={Paper} sx={{ borderRadius: 0, boxShadow: 'none', border: '1.5px solid #000' }}>
+          <TableContainer 
+            component={Paper} 
+            sx={{ 
+              borderRadius: 2,
+              overflow: 'hidden',
+              bgcolor: 'white',
+              boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.1)'
+            }}
+          >
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#4267F6' }}>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>No</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Nama</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Username</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Alamat</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>No Telepon</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Role</TableCell>
-                  <TableCell align="center" sx={{ color: '#fff', fontWeight: 'bold', border: '1.5px solid #000', fontSize: 18 }}>Aksi</TableCell>
+                <TableRow sx={{ bgcolor: '#4E71FF' }}>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>No</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Nama</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Username</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Alamat</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>No Telepon</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Role</TableCell>
+                  <TableCell align="center" sx={{ color: 'white', fontWeight: 'bold' }}>Aksi</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4, border: '1.5px solid #000' }}>
+                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                       <Typography variant="body1" color="text.secondary">
                         Tidak ada data user ditemukan
                       </Typography>
@@ -535,22 +543,22 @@ const BuatAkun = () => {
                 ) : (
                   users.map((user, index) => (
                     <TableRow key={user.username} hover>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         {index + 1}
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         {user.full_name || '-'}
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         {user.username}
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         {user.address || '-'}
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         {user.phone_number || '-'}
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         <Chip
                           label={getRoleLabel(user.role)}
                           color={getRoleColor(user.role)}
@@ -558,7 +566,7 @@ const BuatAkun = () => {
                           variant="filled"
                         />
                       </TableCell>
-                      <TableCell align="center" sx={{ border: '1.5px solid #000', fontSize: 16 }}>
+                      <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
                           <Tooltip title="Lihat Detail">
                             <IconButton
